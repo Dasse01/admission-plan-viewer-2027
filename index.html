@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2027 시행계획 비교 뷰어 · Google Drive 연동</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── 토큰 ───────────────────────────────────────── */
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #1c2230;
+  --border:    #2a3547;
+  --border2:   #344059;
+  --text:      #e6edf3;
+  --muted:     #7d8fa8;
+  --dim:       #4a5a72;
+
+  --gold:      #f0c060;
+  --gold2:     #c8953a;
+  --blue:      #4a9eff;
+  --blue2:     #1a5db0;
+  --green:     #3dd68c;
+  --green2:    #1a7a4a;
+  --purple:    #a78bfa;
+  --purple2:   #5b38c0;
+  --red:       #f87171;
+  --red2:      #8b2020;
+  --orange:    #fb923c;
+
+  /* 패널 색 */
+  --c0: #f0a040;
+  --c1: #3dd68c;
+  --c2: #a78bfa;
+  --c3: #38bdf8;
+
+  --radius:    14px;
+  --shadow:    0 4px 24px rgba(0,0,0,.45);
+  --split12:   50%;
+  --split23:   66.6%;
+  --split34:   75%;
+  --topH:      56px;
+  --toolH:     64px;
+  --stripH:    44px;
+}
+
+/* ── 라이트 모드 ────────────────────────────────── */
+html.light {
+  --bg:        #f0f4f8;
+  --bg2:       #ffffff;
+  --bg3:       #e8eef5;
+  --border:    #c8d4e0;
+  --border2:   #b0c0d4;
+  --text:      #1a2332;
+  --muted:     #5a6a82;
+  --dim:       #8a9ab2;
+
+  --gold:      #c8780a;
+  --gold2:     #9a5a06;
+  --blue:      #1a6fd4;
+  --blue2:     #0f4a9a;
+  --green:     #16904a;
+  --green2:    #0a5c30;
+  --purple:    #6d28d9;
+  --purple2:   #4c1d95;
+  --red:       #dc2626;
+  --red2:      #991b1b;
+  --orange:    #ea580c;
+
+  --shadow:    0 4px 24px rgba(0,0,0,.12);
+}
+html.light body { background:var(--bg); color:var(--text); }
+html.light ::-webkit-scrollbar-thumb { background:var(--border2); }
+
+/* ── 테마 토글 버튼 ────────────────────────────── */
+.theme-btn{
+  width:36px;height:20px;border-radius:99px;border:none;cursor:pointer;
+  background:var(--border2);position:relative;transition:background .25s;
+  flex-shrink:0;
+}
+.theme-btn::after{
+  content:"";position:absolute;left:3px;top:3px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--text);transition:transform .25s, background .25s;
+}
+html.light .theme-btn{ background:var(--blue); }
+html.light .theme-btn::after{ transform:translateX(16px); background:#fff; }
+
+/* ── 라이트모드 컴포넌트 보정 ───────────────────── */
+html.light .topbar,
+html.light .toolbar,
+html.light .strip,
+html.light .manual-wrap { background:var(--bg2); }
+html.light .panel-header { background:var(--bg3); }
+html.light .panel-content { background:var(--bg); }
+html.light .btn { background:var(--bg3); border-color:var(--border); color:var(--text); }
+html.light .btn:hover { background:var(--border); }
+html.light .btn.blue  { background:var(--blue);   color:#fff; border-color:var(--blue); }
+html.light .btn.blue:hover { background:var(--blue2); }
+html.light .btn.green { background:var(--green);  color:#fff; border-color:var(--green); }
+html.light .btn.gold  { background:var(--gold2);  color:#fff; border-color:var(--gold2); }
+html.light .btn.purple{ background:var(--purple); color:#fff; border-color:var(--purple); }
+html.light .btn.red   { background:var(--red);    color:#fff; border-color:var(--red); }
+html.light .tf-input  { background:var(--bg3); border-color:var(--border); color:var(--text); }
+html.light .tf-input:focus { border-color:var(--blue); }
+html.light .mode-tab  { background:var(--bg3); }
+html.light .mode-tab.active { background:var(--bg2); }
+html.light .panel-viewer { background:var(--bg3); }
+html.light .kw-panel  { background:var(--bg2); border-color:var(--border); }
+html.light .kw-item:hover { background:var(--bg3); }
+html.light .man-card  { background:var(--bg2); border-color:var(--border); }
+html.light .empty-state { color:var(--muted); }
+html.light select     { background:var(--bg3); border-color:var(--border); color:var(--text); }
+html.light .splitter::before { background:var(--border2); }
+html.light .drive-box { background:var(--bg2); border-color:var(--border); }
+html.light .drive-input { background:var(--bg3); border-color:var(--border); color:var(--text); }
+html.light .shortcut-modal-box { background:var(--bg2); border-color:var(--border); }
+html.light canvas { filter: brightness(1) contrast(1) !important; }
+
+/* ── 리셋 ──────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.6;overflow:hidden;}
+button,input,select{font:inherit;color:inherit;}
+button{cursor:pointer;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
+::selection{background:rgba(74,158,255,.35);}
+
+/* ── 레이아웃 ───────────────────────────────────── */
+.app{display:grid;grid-template-rows:var(--topH) var(--toolH) var(--stripH) auto 1fr;height:100vh;overflow:hidden;}
+
+/* ── 상단바 ─────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  position:relative;z-index:30;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  font-size:17px;font-weight:900;letter-spacing:-.5px;white-space:nowrap;
+}
+.logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;box-shadow:0 2px 8px rgba(240,192,96,.4);
+}
+.logo-text{background:linear-gradient(90deg,var(--gold),#fff8dc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-year{font-size:12px;font-weight:700;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.5px;}
+
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.kbd{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;cursor:default;}
+.kbd:hover{border-color:var(--gold);color:var(--gold);}
+.count-badge{padding:4px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:12px;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace;}
+
+/* ── 툴바 ──────────────────────────────────────── */
+.toolbar{
+  display:flex;align-items:center;gap:10px;padding:0 18px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.toolbar::-webkit-scrollbar{height:0;}
+.tf-group{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.tf-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.tf-input{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:9px;
+  padding:6px 10px;color:var(--text);outline:none;min-width:140px;
+  transition:border .15s,box-shadow .15s;
+}
+.tf-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,158,255,.15);}
+.tf-input::placeholder{color:var(--dim);}
+.tf-input.uni-a:focus{border-color:var(--c0);box-shadow:0 0 0 3px rgba(240,160,64,.15);}
+.tf-input.uni-b:focus{border-color:var(--c1);box-shadow:0 0 0 3px rgba(61,214,140,.15);}
+.tf-input.uni-c:focus{border-color:var(--c2);box-shadow:0 0 0 3px rgba(167,139,250,.15);}
+.tf-input.uni-d:focus{border-color:var(--c3);box-shadow:0 0 0 3px rgba(56,189,248,.15);}
+.divider-v{width:1px;height:36px;background:var(--border);flex-shrink:0;}
+
+/* ── 버튼 시스템 ────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  border:1px solid var(--border2);border-radius:9px;padding:7px 12px;
+  background:var(--bg3);color:var(--text);
+  transition:all .15s;font-weight:600;
+}
+.btn:hover{background:var(--bg2);border-color:var(--border2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.btn:active{transform:translateY(0);}
+.btn.gold{background:linear-gradient(135deg,var(--gold),var(--gold2));border-color:var(--gold2);color:#1a1200;font-weight:800;box-shadow:0 2px 12px rgba(240,192,96,.35);}
+.btn.gold:hover{box-shadow:0 4px 18px rgba(240,192,96,.5);}
+.btn.blue{background:rgba(74,158,255,.15);border-color:rgba(74,158,255,.4);color:var(--blue);}
+.btn.blue:hover{background:rgba(74,158,255,.25);}
+.btn.green{background:rgba(61,214,140,.12);border-color:rgba(61,214,140,.35);color:var(--green);}
+.btn.green:hover{background:rgba(61,214,140,.22);}
+.btn.purple{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.35);color:var(--purple);}
+.btn.purple:hover{background:rgba(167,139,250,.22);}
+.btn.red{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3);color:var(--red);}
+.btn.red:hover{background:rgba(248,113,113,.2);}
+.btn.orange{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.3);color:var(--orange);}
+.btn.orange:hover{background:rgba(251,146,60,.2);}
+.btn.sm{padding:5px 9px;font-size:12px;border-radius:7px;}
+.btn.xs{padding:3px 7px;font-size:11px;border-radius:6px;}
+.btn.icon{padding:6px 8px;}
+.btn[data-active="true"]{box-shadow:0 0 0 2px currentColor;}
+
+/* ── 스트립 ─────────────────────────────────────── */
+.strip{
+  display:flex;align-items:center;gap:8px;padding:0 18px;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.strip::-webkit-scrollbar{height:0;}
+.strip-hint{margin-left:auto;font-size:11px;color:var(--dim);white-space:nowrap;}
+.strip-hint kbd{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 4px;font-size:10px;font-family:'DM Mono',monospace;}
+datalist{display:none;}
+
+/* ── 워크스페이스 ────────────────────────────────── */
+.workspace{height:100%;overflow:hidden;display:grid;gap:0;}
+.workspace.two  {grid-template-columns:minmax(300px,var(--split12)) 8px minmax(300px,calc(100% - var(--split12)));}
+.workspace.three{grid-template-columns:minmax(240px,var(--split12)) 8px minmax(240px,calc(var(--split23) - var(--split12))) 8px minmax(240px,calc(100% - var(--split23)));}
+.workspace.four {grid-template-columns:minmax(200px,var(--split12)) 8px minmax(200px,calc(var(--split23) - var(--split12))) 8px minmax(200px,calc(var(--split34) - var(--split23))) 8px minmax(200px,calc(100% - var(--split34)));}
+
+.splitter{cursor:col-resize;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;z-index:5;}
+.splitter::before{content:"";width:2px;height:40px;border-radius:99px;background:var(--border2);transition:.2s;}
+.splitter:hover::before{background:var(--blue);box-shadow:0 0 8px var(--blue);}
+.splitter:active::before{background:var(--gold);box-shadow:0 0 12px var(--gold);}
+
+/* ── 패널 ──────────────────────────────────────── */
+.panel{
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  background:var(--bg2);border-right:1px solid var(--border);
+}
+.panel:last-child{border-right:none;}
+
+.panel-head{
+  flex-shrink:0;padding:10px 14px 8px;border-bottom:1px solid var(--border);
+  background:var(--bg3);
+}
+.panel-uni{font-size:16px;font-weight:900;letter-spacing:-.3px;line-height:1.2;}
+.panel-meta{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;}
+.panel-accent{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;flex-shrink:0;}
+
+.panel-ctrl{flex-shrink:0;padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px;background:var(--bg2);}
+.ctrl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+
+.local-input{
+  flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:6px 10px;outline:none;color:var(--text);
+  transition:border .15s,box-shadow .15s;
+}
+.local-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,158,255,.12);}
+.local-input::placeholder{color:var(--dim);}
+
+.result-select{
+  flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:6px 9px;outline:none;color:var(--text);
+  font-family:'DM Mono',monospace;font-size:12px;
+}
+.scale-select{
+  width:80px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:6px 8px;outline:none;color:var(--text);
+  font-family:'DM Mono',monospace;font-size:12px;
+}
+
+/* ── 상태 표시 ──────────────────────────────────── */
+.status-bar{
+  flex-shrink:0;padding:6px 12px;border-bottom:1px solid var(--border);
+  font-size:12px;display:flex;align-items:center;gap:7px;
+  background:var(--bg2);
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.status-bar.ok .status-dot{background:var(--green);box-shadow:0 0 6px var(--green);}
+.status-bar.error .status-dot{background:var(--red);box-shadow:0 0 6px var(--red);}
+.status-bar.loading .status-dot{background:var(--blue);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.status-text{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.status-bar.ok .status-text{color:var(--green);}
+.status-bar.error .status-text{color:var(--red);}
+.status-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);font-weight:700;white-space:nowrap;}
+
+/* ── 뷰어 ──────────────────────────────────────── */
+.viewer-wrap{flex:1;overflow:auto;background:var(--bg);padding:10px;position:relative;}
+.viewer-wrap.drag-over{background:rgba(74,158,255,.08);outline:2px dashed var(--blue);outline-offset:-4px;}
+.canvas-wrap{position:relative;width:max-content;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:var(--shadow);}
+canvas{display:block;}
+.overlay{position:absolute;left:0;top:0;}
+
+/* ── 결과 상단 메타 ──────────────────────────────── */
+.result-meta{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);}
+.tag.gold{border-color:rgba(240,192,96,.4);color:var(--gold);}
+.tag.blue{border-color:rgba(74,158,255,.4);color:var(--blue);}
+
+/* ── 빈 상태 ────────────────────────────────────── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:14px;color:var(--dim);padding:30px;text-align:center;
+}
+.empty-icon{font-size:48px;opacity:.4;}
+.empty-title{font-size:15px;font-weight:700;color:var(--muted);}
+.empty-desc{font-size:12px;line-height:1.7;max-width:260px;}
+.empty-steps{display:flex;flex-direction:column;gap:6px;text-align:left;max-width:240px;}
+.empty-step{display:flex;align-items:flex-start;gap:8px;font-size:12px;}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0;font-family:'DM Mono',monospace;}
+
+/* ── 드롭존 오버레이 ─────────────────────────────── */
+#dropzone{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(13,17,23,.88);
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;
+  border:3px dashed var(--gold);
+}
+#dropzone.active{display:flex;}
+#dropzone .dz-icon{font-size:56px;}
+#dropzone .dz-text{font-size:20px;font-weight:900;color:var(--gold);}
+
+/* ── 토스트 ─────────────────────────────────────── */
+#toast-wrap{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:12px;
+  box-shadow:var(--shadow);font-size:13px;font-weight:600;
+  animation:slide-in .25s ease;pointer-events:auto;min-width:200px;
+}
+.toast.ok{border-color:rgba(61,214,140,.4);color:var(--green);}
+.toast.error{border-color:rgba(248,113,113,.35);color:var(--red);}
+.toast.info{border-color:rgba(74,158,255,.35);color:var(--blue);}
+@keyframes slide-in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slide-out{to{opacity:0;transform:translateY(12px);}}
+
+/* ── 형광펜 모드 커서 ─────────────────────────────── */
+.drawing-mode{cursor:crosshear;}
+
+/* ── 모드 탭 ────────────────────────────────────── */
+.mode-tab{
+  flex:1;padding:8px 4px;font-size:12px;font-weight:700;
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;
+  transition:all .15s;
+}
+.mode-tab:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.mode-tab.active{color:var(--tc, var(--gold));border-bottom-color:var(--tc, var(--gold));background:rgba(255,255,255,.04);}
+.mode-badge{
+  background:var(--blue);color:#fff;border-radius:99px;
+  font-size:10px;padding:1px 6px;font-family:'DM Mono',monospace;
+}
+.page-input::-webkit-inner-spin-button,.page-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+
+/* ── 단축키 모달 ────────────────────────────────── */
+#shortcut-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);align-items:center;justify-content:center;}
+#shortcut-modal.open{display:flex;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px;max-width:480px;width:90%;box-shadow:var(--shadow);}
+.modal-title{font-size:18px;font-weight:900;margin-bottom:16px;color:var(--gold);}
+.shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sc-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:8px;gap:10px;}
+.sc-desc{font-size:12px;color:var(--muted);}
+.sc-key{font-family:'DM Mono',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:2px 6px;color:var(--text);white-space:nowrap;}
+
+/* ── 사용자 매뉴얼 패널 ──────────────────────────── */
+.manual-wrap{
+  border-bottom:1px solid var(--border);background:var(--bg2);
+  overflow:hidden;flex-shrink:0;
+}
+.manual-toggle{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:7px 18px;background:var(--bg3);border:none;
+  border-bottom:1px solid var(--border);cursor:pointer;
+  font-size:12px;font-weight:700;color:var(--muted);
+  transition:background .15s;
+}
+.manual-toggle:hover{background:var(--bg2);color:var(--text);}
+.manual-toggle .arrow{transition:transform .2s;font-size:10px;}
+.manual-toggle.open .arrow{transform:rotate(180deg);}
+.manual-toggle .badge-new{
+  padding:2px 7px;background:rgba(61,214,140,.15);border:1px solid rgba(61,214,140,.4);
+  border-radius:99px;color:var(--green);font-size:10px;font-weight:800;
+}
+.manual-body{
+  display:none;padding:14px 18px 16px;overflow-x:auto;
+}
+.manual-body.open{display:block;}
+.manual-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-width:700px;
+}
+.man-card{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:14px;
+  padding:14px;display:flex;flex-direction:column;gap:8px;
+}
+.man-card-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:900;margin-bottom:2px;
+}
+.man-card-icon{font-size:20px;flex-shrink:0;}
+.man-step{
+  display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.55;
+}
+.man-num{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;font-family:'DM Mono',monospace;
+}
+.man-tip{
+  margin-top:4px;padding:6px 9px;border-radius:8px;
+  font-size:11px;line-height:1.5;
+}
+.man-key{
+  display:inline-block;background:var(--bg);border:1px solid var(--border2);
+  border-radius:4px;padding:1px 5px;font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text);margin:1px;
+}
+/* 카드별 컬러 */
+.man-card.c-gold .man-card-head{color:var(--gold);}
+.man-card.c-gold .man-num{background:rgba(240,192,96,.18);color:var(--gold);}
+.man-card.c-gold .man-tip{background:rgba(240,192,96,.08);border:1px solid rgba(240,192,96,.2);color:#c8953a;}
+.man-card.c-blue .man-card-head{color:var(--blue);}
+.man-card.c-blue .man-num{background:rgba(74,158,255,.18);color:var(--blue);}
+.man-card.c-blue .man-tip{background:rgba(74,158,255,.07);border:1px solid rgba(74,158,255,.2);color:#4a9eff;}
+.man-card.c-green .man-card-head{color:var(--green);}
+.man-card.c-green .man-num{background:rgba(61,214,140,.15);color:var(--green);}
+.man-card.c-green .man-tip{background:rgba(61,214,140,.07);border:1px solid rgba(61,214,140,.2);color:#3dd68c;}
+.man-card.c-purple .man-card-head{color:var(--purple);}
+.man-card.c-purple .man-num{background:rgba(167,139,250,.15);color:var(--purple);}
+.man-card.c-purple .man-tip{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);color:#a78bfa;}
+#kw-panel{
+  display:none;position:fixed;top:0;right:0;bottom:0;z-index:250;
+  width:340px;background:var(--bg2);border-left:1px solid var(--border2);
+  box-shadow:-8px 0 32px rgba(0,0,0,.5);
+  flex-direction:column;overflow:hidden;
+}
+#kw-panel.open{display:flex;}
+.kwp-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+  background:var(--bg3);
+}
+.kwp-title{font-size:15px;font-weight:900;color:var(--gold);}
+.kwp-body{flex:1;overflow-y:auto;padding:10px;}
+.kwp-body::-webkit-scrollbar{width:4px;}
+.kwp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
+
+.kw-cat{margin-bottom:14px;}
+.kw-cat-title{
+  font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--muted);padding:4px 6px;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.kw-cat-title::after{content:"";flex:1;height:1px;background:var(--border);}
+.kw-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.kw-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:99px;font-size:12px;font-weight:700;
+  border:1px solid var(--border2);background:var(--bg3);color:var(--text);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.kw-chip:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.kw-chip.imp{border-color:rgba(240,192,96,.5);background:rgba(240,192,96,.08);color:var(--gold);}
+.kw-chip.imp:hover{background:rgba(240,192,96,.18);}
+.kw-chip.blue{border-color:rgba(74,158,255,.4);background:rgba(74,158,255,.07);color:var(--blue);}
+.kw-chip.blue:hover{background:rgba(74,158,255,.17);}
+.kw-chip.green{border-color:rgba(61,214,140,.4);background:rgba(61,214,140,.07);color:var(--green);}
+.kw-chip.green:hover{background:rgba(61,214,140,.17);}
+.kw-chip.purple{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.07);color:var(--purple);}
+.kw-chip.purple:hover{background:rgba(167,139,250,.17);}
+.kw-chip.red{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.07);color:var(--red);}
+.kw-chip.red:hover{background:rgba(248,113,113,.17);}
+
+.kw-desc{font-size:11px;color:var(--dim);line-height:1.5;padding:4px 6px 8px;border-bottom:1px solid var(--border);}
+
+/* ── Drive 설정 모달 ────────────────────────────── */
+#drive-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.72);align-items:center;justify-content:center;}
+#drive-modal.open{display:flex;}
+.drive-box{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:28px 28px 24px;width:min(520px,94vw);box-shadow:var(--shadow);}
+.drive-title{font-size:18px;font-weight:900;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.drive-sub{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.drive-field{margin-bottom:14px;}
+.drive-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.drive-label a{color:var(--blue);font-weight:700;font-size:10px;text-decoration:none;}
+.drive-label a:hover{text-decoration:underline;}
+.drive-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);outline:none;font-family:'DM Mono',monospace;font-size:13px;transition:border .15s,box-shadow .15s;}
+.drive-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,158,255,.15);}
+.drive-input::placeholder{color:var(--dim);}
+.drive-hint{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5;}
+.drive-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;}
+.drive-progress{
+  display:none;margin-top:14px;padding:10px 14px;border-radius:10px;
+  background:rgba(74,158,255,.07);border:1px solid rgba(74,158,255,.2);
+  font-size:12px;color:var(--blue);font-family:'DM Mono',monospace;
+}
+.drive-progress.active{display:block;}
+.drive-progress-bar{height:4px;background:var(--border2);border-radius:99px;margin-top:6px;overflow:hidden;}
+.drive-progress-fill{height:100%;background:var(--blue);border-radius:99px;transition:width .3s;width:0%;}
+
+/* ── 미디어 쿼리 ────────────────────────────────── */
+@media(max-width:1100px){
+  .workspace.two,.workspace.three,.workspace.four{grid-template-columns:1fr;}
+  .splitter{display:none;}
+  .workspace{overflow-y:auto;}
+  .panel{height:80vh;}
+  #kw-panel{width:100%;}
+}
+@media(max-width:700px){
+  .topbar{padding:0 10px;}
+  .toolbar{padding:0 10px;gap:7px;}
+  .strip{padding:0 10px;}
+  .logo-year,.kbd,.topbar-right .btn:not(.gold){display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- 드롭존 -->
+<div id="dropzone">
+  <div class="dz-icon">📂</div>
+  <div class="dz-text">PDF 파일을 여기에 놓으세요</div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast-wrap"></div>
+
+<!-- 단축키 모달 -->
+
+<!-- 검색어 가이드 사이드패널 -->
+<div id="kw-panel">
+  <div class="kwp-head">
+    <div class="kwp-title">🔍 시행계획 핵심 검색어</div>
+    <button class="btn sm red" onclick="closeKwPanel()">✕ 닫기</button>
+  </div>
+  <div class="kwp-body" id="kwp-body"></div>
+</div>
+<div id="shortcut-modal">
+  <div class="modal-box">
+    <div class="modal-title">⌨️ 키보드 단축키</div>
+    <div class="shortcut-grid">
+      <div class="sc-item"><span class="sc-desc">전체 검색</span><span class="sc-key">Enter</span></div>
+      <div class="sc-item"><span class="sc-desc">이전 결과</span><span class="sc-key">← / ,</span></div>
+      <div class="sc-item"><span class="sc-desc">다음 결과</span><span class="sc-key">→ / .</span></div>
+      <div class="sc-item"><span class="sc-desc">A↔B 교환</span><span class="sc-key">Alt+S</span></div>
+      <div class="sc-item"><span class="sc-desc">검색창 포커스</span><span class="sc-key">Ctrl+F</span></div>
+      <div class="sc-item"><span class="sc-desc">확대</span><span class="sc-key">= / +</span></div>
+      <div class="sc-item"><span class="sc-desc">축소</span><span class="sc-key">- / _</span></div>
+      <div class="sc-item"><span class="sc-desc">단축키 닫기</span><span class="sc-key">Esc</span></div>
+    </div>
+    <div style="margin-top:14px;text-align:center;">
+      <button class="btn sm" onclick="closeShortcuts()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ☁️ Google Drive 설정 모달 -->
+<div id="drive-modal">
+  <div class="drive-box">
+    <div class="drive-title">☁️ Google Drive 연결</div>
+    <div class="drive-sub">
+      2027 대학입학전형 시행계획 PDF를 Google Drive에서 직접 불러옵니다.<br>
+      별도 설정 없이 버튼 하나로 연결됩니다.
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(61,214,140,.07);border:1px solid rgba(61,214,140,.25);border-radius:12px;margin-bottom:16px;">
+      <span style="font-size:22px;">📁</span>
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--green);">2027 시행계획 PDF 폴더</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;">경기·서울·인천 68개 대학 시행계획</div>
+      </div>
+    </div>
+
+    <div class="drive-hint" style="margin-bottom:4px;font-size:12px;color:var(--muted);line-height:1.7;">
+      ⏱ PDF 개수에 따라 <b>수 분</b>이 소요될 수 있습니다.<br>
+      완료 후 다음 방문부터는 <b>자동으로 다시 연결</b>됩니다.
+    </div>
+
+    <div class="drive-progress" id="driveProgress">
+      <span id="driveProgressText">연결 중…</span>
+      <div class="drive-progress-bar"><div class="drive-progress-fill" id="driveProgressFill"></div></div>
+    </div>
+
+    <div class="drive-actions">
+      <button class="btn sm" onclick="closeDriveModal()">취소</button>
+      <button class="btn blue" id="driveConnectBtn" onclick="connectDrive()">☁️ Drive에서 불러오기</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- 상단바 -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <span class="logo-text">2027 시행계획 비교 뷰어</span>
+      <span class="logo-year">v2.1</span>
+    </div>
+    <div class="topbar-right">
+      <span class="count-badge" id="uniCount">— 대학</span>
+      <div id="folder-status" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;"></div>
+      <button class="btn sm" onclick="openShortcuts()" title="단축키 보기">⌨️ 단축키</button>
+      <button class="btn sm green" onclick="toggleKwPanel()">🔍 검색어 가이드</button>
+      <button class="btn sm blue" id="driveBtn" onclick="openDriveModal()" title="Google Drive에서 PDF 불러오기">☁️ Drive 연결</button>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="라이트/다크 모드 전환"></button>
+      <input id="folderInput" type="file" accept="application/pdf" multiple webkitdirectory directory style="display:none">
+    </div>
+  </div>
+
+  <!-- 툴바 -->
+  <div class="toolbar">
+    <div class="tf-group">
+      <div class="tf-label">🟠 비교대학 A</div>
+      <input class="tf-input uni-a" id="uniA" list="unilist" placeholder="대학명 입력 또는 선택">
+    </div>
+    <div class="tf-group">
+      <div class="tf-label">🟢 비교대학 B</div>
+      <input class="tf-input uni-b" id="uniB" list="unilist" placeholder="대학명 입력 또는 선택">
+    </div>
+    <div class="tf-group" id="uniC-group" style="display:none">
+      <div class="tf-label">🟣 비교대학 C</div>
+      <input class="tf-input uni-c" id="uniC" list="unilist" placeholder="3·4개 비교 때만 사용">
+    </div>
+    <div class="tf-group" id="uniD-group" style="display:none">
+      <div class="tf-label">🔵 비교대학 D</div>
+      <input class="tf-input uni-d" id="uniD" list="unilist" placeholder="4개 비교 때만 사용">
+    </div>
+    <div class="divider-v"></div>
+    <div class="tf-group" style="flex:1;min-width:180px;">
+      <div class="tf-label">🔍 전체 키워드 검색</div>
+      <input class="tf-input" id="globalKeyword" placeholder="모든 패널 동시 검색 · Enter">
+    </div>
+    <button class="btn blue" id="globalSearchBtn">검색</button>
+    <button class="btn sm" id="globalResetBtn" title="검색 초기화 — 모든 패널을 열람 모드로 되돌립니다">✕ 초기화</button>
+    <button class="btn" id="swapBtn" title="Alt+S">🔄 A↔B</button>
+  </div>
+
+  <!-- 스트립 -->
+  <div class="strip">
+    <button class="btn sm" id="twoBtn" title="A · B 2개 패널 비교">2개 비교</button>
+    <button class="btn sm purple" id="threeBtn" title="A · B · C 3개 패널 비교">3개 비교</button>
+    <button class="btn sm blue" id="fourBtn" title="A · B · C · D 4개 패널 비교">4개 비교</button>
+    <div class="divider-v" style="height:20px;"></div>
+    <div id="recentSearches" style="display:flex;gap:5px;align-items:center;"></div>
+    <div class="strip-hint">
+      <kbd>←</kbd><kbd>→</kbd> 결과 이동 &nbsp;·&nbsp; <kbd>Ctrl+F</kbd> 검색 &nbsp;·&nbsp; <kbd>±</kbd> 배율 &nbsp;·&nbsp; 드래그로 패널 너비 조절 &nbsp;·&nbsp; <b style="color:var(--blue);">4개 비교</b>까지 지원
+    </div>
+    <datalist id="unilist"></datalist>
+  </div>
+
+  <!-- 워크스페이스 -->
+  <!-- ★ 사용자 매뉴얼 (접기/펴기) -->
+  <div class="manual-wrap">
+    <button class="manual-toggle" id="manualToggle" onclick="toggleManual()">
+      <span class="arrow">▼</span>
+      <span>📖 초보자 사용 가이드</span>
+      <span class="badge-new">처음 사용하세요?</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--dim);">클릭하여 접기 / 펼치기</span>
+    </button>
+    <div class="manual-body open" id="manualBody">
+      <div class="manual-grid">
+
+        <!-- 카드 1: 시작 방법 -->
+        <div class="man-card c-gold">
+          <div class="man-card-head"><span class="man-card-icon">☁️</span>프로그램 시작</div>
+          <div class="man-step">
+            <div class="man-num">1</div>
+            <div>페이지에 접속하면 <b>Google Drive에서 자동으로 PDF를 불러옵니다</b><br>
+            <span style="color:var(--dim);font-size:11px;">별도 설치·설정 없이 바로 사용 가능합니다</span></div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">2</div>
+            <div>상단 버튼이 <b style="color:var(--green);">✅ Drive 연동완료</b>로 바뀌면<br>PDF 로드가 완료된 것입니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">3</div>
+            <div>버튼이 <b style="color:var(--blue);">☁️ Drive 연결</b> (파란색)이면<br>클릭 → <b>"Drive에서 불러오기"</b>를 눌러 수동 연결합니다</div>
+          </div>
+          <div class="man-tip">
+            💡 한 번 접속하면 다음 방문에도<br><b>자동으로 Drive에서 불러옵니다.</b>
+          </div>
+        </div>
+
+        <!-- 카드 2: 대학 선택 & 비교 -->
+        <div class="man-card c-blue">
+          <div class="man-card-head"><span class="man-card-icon">📖</span>대학 선택 &amp; 비교</div>
+          <div class="man-step">
+            <div class="man-num">1</div>
+            <div>상단 <b>비교대학 A · B</b> 칸에 대학명을 입력하고<br>드롭다운에서 선택합니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">2</div>
+            <div>선택 즉시 <b>1페이지부터 자동으로 열립니다</b><br>별도 클릭이 필요 없습니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">3</div>
+            <div>아래 <b>3개 비교</b> 버튼을 누르면<br><b style="color:var(--purple);">비교대학 C</b> 입력란이 추가됩니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">4</div>
+            <div>패널의 <span class="man-key">⏮</span><span class="man-key">◀</span><span class="man-key">▶</span><span class="man-key">⏭</span> 버튼 또는<br>페이지 번호를 직접 입력해 이동합니다</div>
+          </div>
+          <div class="man-tip">
+            🎨 A <b style="color:#f0a040;">주황</b> · B <b style="color:#3dd68c;">초록</b> · C <b style="color:#a78bfa;">보라</b>로 패널을 구분합니다.
+          </div>
+        </div>
+
+        <!-- 카드 3: 키워드 검색 -->
+        <div class="man-card c-green">
+          <div class="man-card-head"><span class="man-card-icon">🔍</span>키워드 검색</div>
+          <div class="man-step">
+            <div class="man-num">1</div>
+            <div>상단 검색창에 단어를 입력하고<br><span class="man-key">Enter</span> 또는 <b>검색</b> 버튼을 누릅니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">2</div>
+            <div>A·B·C 모든 패널이 <b>동시에 검색</b>되고<br>해당 페이지로 자동 이동합니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">3</div>
+            <div><span class="man-key">←</span><span class="man-key">→</span> 방향키 또는 <span class="man-key">◀</span><span class="man-key">▶</span> 버튼으로<br>결과 페이지를 순서대로 탐색합니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">4</div>
+            <div><b>🔍 검색어 가이드</b> 버튼으로<br>전형별 핵심 검색어를 바로 적용할 수 있습니다</div>
+          </div>
+          <div class="man-tip">
+            💡 추천: <b>수능최저 · 지원자격 · 모집인원<br>논술 · 면접 · 변경사항</b>
+          </div>
+        </div>
+
+        <!-- 카드 4: 형광펜 -->
+        <div class="man-card c-purple">
+          <div class="man-card-head"><span class="man-card-icon">🖊</span>형광펜 사용법</div>
+          <div class="man-step">
+            <div class="man-num">1</div>
+            <div>패널 하단 <b>🖊 형광펜</b> 버튼을 클릭합니다<br>
+            <span style="color:var(--dim);font-size:11px;">버튼 테두리가 생기면 활성화된 상태입니다</span></div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">2</div>
+            <div>PDF 위에서 <b>마우스를 누른 채 드래그</b>하면<br>원하는 위치에 형광펜이 칠해집니다</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">3</div>
+            <div><span class="man-key">↩</span> 마지막 획 하나 지우기<br><span class="man-key">🗑</span> 현재 페이지 형광펜 전체 지우기</div>
+          </div>
+          <div class="man-step">
+            <div class="man-num">4</div>
+            <div><b>🖊 형광펜</b> 버튼을 다시 클릭하면<br>형광펜 모드가 꺼집니다</div>
+          </div>
+          <div class="man-tip">
+            🎨 패널별 형광펜 색상이 자동 구분됩니다.<br>
+            A <b style="color:#f0a040;">주황</b> · B <b style="color:#3dd68c;">초록</b> · C <b style="color:#a78bfa;">보라</b>
+          </div>
+        </div>
+
+      </div><!-- /manual-grid -->
+    </div><!-- /manual-body -->
+  </div><!-- /manual-wrap -->
+
+  <!-- 워크스페이스 본체 -->
+  <div class="workspace two" id="workspace">
+    <section class="panel" id="panel0"></section>
+    <div class="splitter" id="splitter0"></div>
+    <section class="panel" id="panel1"></section>
+  </div>
+</div>
+
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+
+/* ── file:// 프로토콜 대응: 워커를 Blob URL로 우회 ── */
+(async()=>{
+  const workerUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+  if(location.protocol === "file:"){
+    try{
+      const res  = await fetch(workerUrl);
+      const blob = await res.blob();
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    } catch(e){
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl; // fallback
+    }
+  } else {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+  }
+})();
+
+/* ── RECORDS (data/ 폴더 기준) ── */
+const RECORDS = [
+  "(경기) 2027 가천대학교 대학입학전형 시행계획",
+  "(경기) 2027 가톨릭대학교 대학입학전형 시행계획",
+  "(경기) 2027 강남대학교 대학입학전형 시행계획",
+  "(경기) 2027 경기대학교 대학입학전형 시행계획",
+  "(경기) 2027 단국대학교 대학입학전형 시행계획",
+  "(경기) 2027 대진대학교 대학입학전형 시행계획",
+  "(경기) 2027 루터대학교 대학입학전형 시행계획",
+  "(경기) 2027 명지대학교 대학입학전형 시행계획",
+  "(경기) 2027 서울신학대학교 대학입학전형 시행계획",
+  "(경기) 2027 서울장신대학교 대학입학전형 시행계획",
+  "(경기) 2027 성결대학교 대학입학전형 시행계획",
+  "(경기) 2027 수원가톨릭대학교 대학입학전형 시행계획",
+  "(경기) 2027 수원대학교 대학입학전형 시행계획",
+  "(경기) 2027 신한대학교 대학입학전형 시행계획",
+  "(경기) 2027 아신대학교 대학입학전형 시행계획",
+  "(경기) 2027 아주대학교 대학입학전형 시행계획",
+  "(경기) 2027 안양대학교 대학입학전형 시행계획",
+  "(경기) 2027 용인대학교 대학입학전형 시행계획",
+  "(경기) 2027 을지대학교 대학입학전형 시행계획",
+  "(경기) 2027 중앙대학교 대학입학전형 시행계획",
+  "(경기) 2027 차의과학대학교 대학입학전형 시행계획",
+  "(경기) 2027 칼빈대학교 대학입학전형 시행계획",
+  "(경기) 2027 평택대학교 대학입학전형 시행계획",
+  "(경기) 2027 한경국립대학교 대학입학전형 시행계획",
+  "(경기) 2027 한국공학대학교 대학입학전형 시행계획",
+  "(경기) 2027 한국외국어대학교 대학입학전형 시행계획",
+  "(경기) 2027 한국항공대학교 대학입학전형 시행계획",
+  "(경기) 2027 한세대학교 대학입학전형 시행계획",
+  "(경기) 2027 한신대학교 대학입학전형 시행계획",
+  "(경기) 2027 한양대학교(ERICA) 대학입학전형 시행계획",
+  "(경기) 2027 화성의과학대학교 대학입학전형 시행계획",
+  "(경기) 2027학년도 협성대학교 대학입학전형 시행계획",
+  "(서울) 2027 감리교신학대학교 대학입학전형 시행계획 (1)",
+  "(서울) 2027 강서대학교 대학입학전형 시행계획",
+  "(서울) 2027 건국대학교(서울) 대학입학전형 시행계획",
+  "(서울) 2027 경희대학교 대학입학전형 시행계획",
+  "(서울) 2027 고려대학교(서울) 대학입학전형 시행계획",
+  "(서울) 2027 광운대학교 대학입학전형 시행계획",
+  "(서울) 2027 국민대학교 대학입학전형 시행계획",
+  "(서울) 2027 덕성여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 동국대학교(서울) 대학입학전형 시행계획",
+  "(서울) 2027 동덕여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 명지대학교 대학입학전형 시행계획",
+  "(서울) 2027 삼육대학교 대학입학전형 시행계획",
+  "(서울) 2027 상명대학교 대학입학전형 시행계획",
+  "(서울) 2027 서강대학교 대학입학전형 시행계획",
+  "(서울) 2027 서경대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울과기대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울교육대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울기독대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울시립대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 서울한영대학교 대학입학전형 시행계획",
+  "(서울) 2027 성공회대학교 대학입학전형 시행계획",
+  "(서울) 2027 성균관대학교 대학입학전형 시행계획",
+  "(서울) 2027 성신여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 세종대학교 대학입학전형 시행계획",
+  "(서울) 2027 숙명여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 숭실대학교 대학입학전형 시행계획 (1)",
+  "(서울) 2027 연세대학교(서울) 대학입학전형 시행계획",
+  "(서울) 2027 이화여자대학교 대학입학전형 시행계획",
+  "(서울) 2027 장로회신학대학교 대학입학전형 시행계획",
+  "(서울) 2027 중앙대학교 대학입학전형 시행계획",
+  "(서울) 2027 총신대학교 대학입학전형 시행계획",
+  "(서울) 2027 추계예술대학교 대학입학전형 시행계획",
+  "(서울) 2027 한국성서대학교 대학입학전형 시행계획",
+  "(서울) 2027 한국외국어대학교 대학입학전형 시행계획",
+  "(서울) 2027 한국체육대학교 대학입학전형 시행계획",
+  "(서울) 2027 한성대학교 대학입학전형 시행계획",
+  "(서울) 2027 한양대학교(서울) 대학입학전형 시행계획",
+  "(서울) 2027 홍익대학교 대학입학전형 시행계획",
+  "(인천) 2027 경인교육대학교 대학입학전형 시행계획",
+  "(인천) 2027 인천대학교 대학입학전형 시행계획",
+  "(인천) 2027 인하대학교 대학입학전형 시행계획"
+];
+
+/* ── 초기화 ── */
+const PANEL_COLORS = ["#f0a040","#3dd68c","#a78bfa","#38bdf8"];
+const SCALES = [1.0,1.1,1.25,1.4,1.6,1.8,2.0,2.4];
+
+const inputs = [0,1,2,3].map(i=>document.getElementById(`uni${String.fromCharCode(65+i)}`));
+const globalKwInput = document.getElementById("globalKeyword");
+const workspace     = document.getElementById("workspace");
+
+let compareCount = 2;
+let allFolderFiles = []; // File 객체 배열
+let availableLabels = []; // 실제 로드된 PDF에 매칭되는 RECORDS 라벨
+let states = [0,1,2,3].map(i=>({
+  file:null,doc:null,results:[],resultIndex:0,keyword:"",
+  scale:1.0,annotations:{},drawing:false,color:PANEL_COLORS[i],
+  browsePageNum:1, mode:"browse"  // "browse" | "search"
+}));
+
+/* ── 대학 목록 초기화 (폴더 로드 전: 전체 목록) ── */
+function refreshUniList(labels){
+  const list = labels && labels.length ? labels : RECORDS;
+  document.getElementById("unilist").innerHTML = list.map(n=>`<option value="${n}"></option>`).join("");
+  document.getElementById("uniCount").textContent = `${list.length}개 대학`;
+}
+refreshUniList(null);
+
+/* ══ IndexedDB — 폴더 핸들 영구 저장 ══ */
+const IDB_NAME="viewer2027", IDB_STORE="handles", IDB_KEY="dataFolder";
+function openIDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function saveHandle(handle){
+  try{ const db=await openIDB(); const tx=db.transaction(IDB_STORE,"readwrite"); tx.objectStore(IDB_STORE).put(handle,IDB_KEY); }catch(e){}
+}
+async function loadHandle(){
+  try{ const db=await openIDB(); return await new Promise((res,rej)=>{ const req=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(IDB_KEY); req.onsuccess=e=>res(e.target.result); req.onerror=rej; }); }catch(e){ return null; }
+}
+
+/* ── 폴더 스캔 공통 ── */
+async function scanDirHandle(dirHandle){
+  const files=[];
+  async function walk(handle,depth=0){
+    for await(const [name,entry] of handle.entries()){
+      if(entry.kind==="file"&&name.toLowerCase().endsWith(".pdf")) files.push(await entry.getFile());
+      else if(entry.kind==="directory"&&depth<2) await walk(entry,depth+1);
+    }
+  }
+  await walk(dirHandle);
+  return files;
+}
+
+/* ── data 폴더 열기 ── */
+window.openDataFolder = async function(){
+  if(!window.showDirectoryPicker){
+    toast("Chrome/Edge에서 실행하거나, ⬆ 수동선택 버튼을 사용하세요.","error",5000);
+    document.getElementById("folderInput").click();
+    return;
+  }
+  try{
+    const dirHandle = await window.showDirectoryPicker({mode:"read"});
+    await saveHandle(dirHandle);
+    const files = await scanDirHandle(dirHandle);
+    applyFiles(files, dirHandle.name);
+  } catch(e){
+    if(e.name==="SecurityError"){
+      toast("보안 제한 — ⬆ 수동선택 버튼을 사용해 주세요.","error",5000);
+      document.getElementById("folderInput").click();
+    } else if(e.name!=="AbortError"){
+      toast("폴더 열기 실패: "+e.message,"error");
+    }
+  }
+};
+
+/* ── 시작 시 자동 복원 ── */
+async function tryAutoRestore(){
+  // ① Google Drive 자동 연결 (GAS 프록시 — 항상 시도)
+  const hasDrive = true; // GAS URL 하드코딩이므로 항상 시도
+  if(hasDrive){
+    const ok = await tryDriveAutoLoad();
+    if(ok) return;
+  }
+
+  // ② fetch 자동 로드 (시작.bat으로 실행한 경우 — --allow-file-access-from-files)
+  const fetched = await tryFetchAutoLoad();
+  if(fetched) return;
+
+  // ③ IndexedDB 핸들 복원 (이전에 폴더 선택한 경우)
+  if(!window.showDirectoryPicker) return;
+  const handle = await loadHandle();
+  if(!handle) return;
+  try{
+    const perm = await handle.queryPermission({mode:"read"});
+    if(perm==="granted"){
+      const files = await scanDirHandle(handle);
+      if(files.length){ applyFiles(files, handle.name, true); return; }
+    }
+    const req = await handle.requestPermission({mode:"read"});
+    if(req==="granted"){
+      const files = await scanDirHandle(handle);
+      if(files.length) applyFiles(files, handle.name, true);
+    }
+  } catch(e){}
+}
+
+/* ── fetch 자동 로드 (--allow-file-access-from-files 환경) ── */
+async function tryFetchAutoLoad(){
+  if(location.protocol !== "file:") return false;
+  // 대표 파일 1개로 접근 가능 여부 먼저 확인
+  const testLabel = RECORDS[0];
+  const testUrl   = `./data/${testLabel}.pdf`;
+  try{
+    const probe = await fetch(testUrl, {method:"HEAD"}).catch(()=>null);
+    if(!probe?.ok) return false;
+  } catch(e){ return false; }
+
+  // 접근 가능 → 전체 로드
+  setFolderStatus("⏳ data 폴더 자동 로딩 중…");
+  const files = [];
+  await Promise.all(RECORDS.map(async label=>{
+    try{
+      const url = `./data/${encodeURIComponent(label)}.pdf`;
+      const res = await fetch(url);
+      if(res.ok){
+        const blob = await res.blob();
+        files.push(new File([blob], label+".pdf", {type:"application/pdf"}));
+      }
+    } catch(e){}
+  }));
+
+  if(!files.length) return false;
+  applyFiles(files, "data (자동)", true);
+  toast(`🚀 자동 로드 완료 — ${files.length}개 PDF`,"ok");
+  return true;
+}
+
+function setFolderStatus(msg){
+  const el=document.getElementById("folder-status");
+  if(el) el.textContent=msg;
+}
+
+/* ── 파일 입력 (수동 fallback) ── */
+document.getElementById("folderInput").addEventListener("change", e=>{
+  const files = [...e.target.files].filter(f=>f.name.toLowerCase().endsWith(".pdf"));
+  applyFiles(files, "선택한 폴더");
+});
+
+/* ── 드롭존 ── */
+const dropzone = document.getElementById("dropzone");
+document.addEventListener("dragover",e=>{e.preventDefault();dropzone.classList.add("active");});
+document.addEventListener("dragleave",e=>{ if(e.relatedTarget===null) dropzone.classList.remove("active"); });
+document.addEventListener("drop",e=>{
+  e.preventDefault(); dropzone.classList.remove("active");
+  const files=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith(".pdf"));
+  if(files.length) applyFiles(files,"드롭 폴더");
+  else toast("PDF 파일이 없습니다","error");
+});
+
+/* ── 공통 파일 적용 함수 ── */
+function applyFiles(files, folderName, silent=false){
+  if(!files.length){ if(!silent) toast("PDF 파일이 없습니다","error"); return; }
+  allFolderFiles = files;
+
+  availableLabels = RECORDS.filter(label=>{
+    const ln=norm(label);
+    return files.some(f=>norm(f.name).includes(ln)||ln.includes(norm(f.name.replace(/\.pdf$/i,""))));
+  });
+  const extraFiles = files.filter(f=>{
+    const fn=norm(f.name.replace(/\.pdf$/i,""));
+    return !RECORDS.some(r=>norm(r).includes(fn)||fn.includes(norm(r)));
+  });
+  const allLabels = [...availableLabels, ...extraFiles.map(f=>f.name.replace(/\.pdf$/i,""))];
+  refreshUniList(allLabels);
+
+  const matched=availableLabels.length, total=files.length;
+  document.getElementById("folder-status").textContent=`📁 ${folderName} · PDF ${total}개 · 매칭 ${matched}개`;
+  if(!silent) toast(`PDF ${total}개 로드 완료 (${matched}개 대학 매칭)`,"ok");
+  else toast(`📂 자동 복원 완료 — ${total}개 PDF 연결됨`,"ok");
+
+  connectFolderFiles();
+  renderPanels();
+}
+
+/* ── 최근 검색어 ── */
+let recentSearches = JSON.parse(localStorage.getItem("recentKw")||"[]");
+function saveRecent(kw){
+  if(!kw) return;
+  recentSearches = [kw,...recentSearches.filter(x=>x!==kw)].slice(0,6);
+  localStorage.setItem("recentKw", JSON.stringify(recentSearches));
+  renderRecent();
+}
+function renderRecent(){
+  const wrap = document.getElementById("recentSearches");
+  if(!recentSearches.length){ wrap.innerHTML=""; return; }
+  wrap.innerHTML = `<span style="font-size:11px;color:var(--dim);white-space:nowrap;">최근:</span>` +
+    recentSearches.map(kw=>`<button class="btn xs" onclick="applyRecent('${kw.replace(/'/g,"\\'")}')" title="${kw}">${kw.length>8?kw.slice(0,8)+"…":kw}</button>`).join("");
+}
+window.applyRecent = kw => { globalKwInput.value=kw; runGlobalSearch(); };
+renderRecent();
+
+/* ── 확인 토스트 ── */
+function toastConfirm(msg, btnLabel, onConfirm, ms=6000){
+  const wrap = document.getElementById("toast-wrap");
+  const el   = document.createElement("div");
+  el.className = "toast info";
+  el.style.gap = "10px";
+  el.innerHTML = `<span>☁️</span><span style="flex:1;">${msg}</span>
+    <button class="btn xs blue" style="white-space:nowrap;">${btnLabel}</button>
+    <button class="btn xs" style="white-space:nowrap;">취소</button>`;
+  wrap.append(el);
+  const [confirmBtn, cancelBtn] = el.querySelectorAll("button");
+  const remove = () => { el.style.animation="slide-out .25s ease forwards"; setTimeout(()=>el.remove(),260); };
+  confirmBtn.onclick = () => { remove(); onConfirm(); };
+  cancelBtn.onclick  = remove;
+  setTimeout(remove, ms);
+}
+
+/* ── 토스트 ── */
+function toast(msg, type="info", ms=2800){
+  const el=document.createElement("div");
+  el.className=`toast ${type}`;
+  const icons={ok:"✅",error:"❌",info:"ℹ️"};
+  el.innerHTML=`<span>${icons[type]||""}</span><span>${msg}</span>`;
+  document.getElementById("toast-wrap").append(el);
+  setTimeout(()=>{ el.style.animation="slide-out .25s ease forwards"; setTimeout(()=>el.remove(),260); },ms);
+}
+
+/* ── 폴더 입력 ── */
+document.getElementById("folderInput").addEventListener("change", e=>{
+  allFolderFiles=[...e.target.files].filter(f=>f.name.toLowerCase().endsWith(".pdf"));
+  connectFolderFiles(); renderPanels();
+  toast(`PDF ${allFolderFiles.length}개 로드됨`,"ok");
+});
+
+/* ── 단축키 모달 ── */
+window.openShortcuts  = ()=> document.getElementById("shortcut-modal").classList.add("open");
+window.closeShortcuts = ()=> document.getElementById("shortcut-modal").classList.remove("open");
+
+/* ── 매뉴얼 접기/펴기 ── */
+window.toggleManual = function(){
+  const body=document.getElementById("manualBody");
+  const btn=document.getElementById("manualToggle");
+  const isOpen=body.classList.contains("open");
+  body.classList.toggle("open",!isOpen);
+  btn.classList.toggle("open",!isOpen);
+  localStorage.setItem("manualOpen", (!isOpen).toString());
+};
+// 초기 상태 복원 (기본: 열림)
+(function(){
+  const saved=localStorage.getItem("manualOpen");
+  if(saved==="false"){
+    document.getElementById("manualBody")?.classList.remove("open");
+    document.getElementById("manualToggle")?.classList.remove("open");
+  } else {
+    document.getElementById("manualToggle")?.classList.add("open");
+  }
+})();
+
+/* ══════════════════════════════════════════════
+   🔍 시행계획 핵심 검색어 가이드 데이터
+   ══════════════════════════════════════════════ */
+const KW_GUIDE = [
+  {
+    cat:"⚠️ 최우선 확인 — 지원 가능 여부 결정",
+    color:"imp",
+    desc:"이 항목부터 먼저 확인하세요. 해당 조건을 충족하지 못하면 지원 자체가 불가합니다.",
+    items:[
+      {kw:"지원자격", tip:"나이·학력·졸업연도 제한 등 지원 불가 사유 먼저 확인"},
+      {kw:"수능최저", tip:"수시 합격 후에도 수능최저 미충족 시 자동 불합격"},
+      {kw:"최저학력기준", tip:"'수능최저'와 함께 검색, 표현이 대학마다 다름"},
+      {kw:"재수생", tip:"재수·삼수 지원 제한 여부 확인 (일부 교과전형)"},
+      {kw:"검정고시", tip:"검정고시 출신 지원 가능 여부 명시"},
+      {kw:"외국고교", tip:"외국 고교 졸업자 지원 제한 여부"},
+    ]
+  },
+  {
+    cat:"📋 수시 전형 구조 파악",
+    color:"blue",
+    desc:"수시 어떤 전형이 있는지 전체 그림을 파악합니다.",
+    items:[
+      {kw:"학생부교과", tip:"교과 성적 위주 전형 — 내신 등급이 핵심"},
+      {kw:"학생부종합", tip:"서류+면접 종합평가 — 활동·역량 중심"},
+      {kw:"논술", tip:"논술 전형 유무 및 반영 비율"},
+      {kw:"실기", tip:"예체능·특기자 전형"},
+      {kw:"면접", tip:"면접 실시 여부·방식·비율 확인"},
+      {kw:"서류평가", tip:"학생부·자소서 등 서류 반영 방법"},
+      {kw:"자기소개서", tip:"자소서 요구 여부 (2028 폐지 전환 대학 확인)"},
+      {kw:"추천서", tip:"교사 추천서 요구 여부"},
+    ]
+  },
+  {
+    cat:"📊 학생부 반영 방법 (교과전형)",
+    color:"green",
+    desc:"교과 성적을 어떻게 환산하는지가 유·불리를 결정합니다.",
+    items:[
+      {kw:"반영교과", tip:"어떤 교과군을 반영하는지 — 인문/자연/예체능 구분"},
+      {kw:"반영과목", tip:"석차등급 vs 성취도 vs 이수단위 가중치"},
+      {kw:"공통과목", tip:"공통과목 반영 비율"},
+      {kw:"선택과목", tip:"일반선택·진로선택 반영 방법"},
+      {kw:"진로선택", tip:"성취도(A/B/C) 환산 방식이 대학마다 다름"},
+      {kw:"이수단위", tip:"이수단위 가중 적용 여부"},
+      {kw:"학년별 반영", tip:"학년별 가중치(1:2:3학년) 확인"},
+      {kw:"출결", tip:"출결 감점 기준 — 미인정 결석 일수"},
+      {kw:"봉사활동", tip:"봉사시간 반영 여부 및 기준"},
+    ]
+  },
+  {
+    cat:"🎯 수능 반영 방법 (정시·수능최저)",
+    color:"purple",
+    desc:"수능 과목 선택과 반영 방식이 대학마다 크게 다릅니다.",
+    items:[
+      {kw:"수능반영비율", tip:"국어·수학·영어·탐구 각 반영 비율"},
+      {kw:"국어", tip:"화법과작문 vs 언어와매체 선택 반영"},
+      {kw:"수학", tip:"확률과통계·미적분·기하 중 반영 범위"},
+      {kw:"영어", tip:"영어 절대평가 환산표 — 1등급 배점 차이"},
+      {kw:"탐구", tip:"사탐·과탐·직탐 중 인정 범위"},
+      {kw:"과탐", tip:"과탐 2과목 필수 여부 (의약계열 중요)"},
+      {kw:"한국사", tip:"한국사 가산점·감점 기준"},
+      {kw:"가산점", tip:"수학 미적분·기하, 과탐 선택 시 가산 여부"},
+      {kw:"변환표준점수", tip:"탐구 변환표준점수 사용 여부"},
+      {kw:"백분위", tip:"표준점수 vs 백분위 사용 여부"},
+    ]
+  },
+  {
+    cat:"📅 전형 일정 확인",
+    color:"blue",
+    desc:"일정 착오는 지원 기회 박탈로 이어집니다.",
+    items:[
+      {kw:"원서접수", tip:"수시·정시 원서접수 기간"},
+      {kw:"서류제출", tip:"서류 제출 기간 및 방법 (온라인·우편)"},
+      {kw:"면접일", tip:"면접 실시 일정 — 대학 간 겹침 확인"},
+      {kw:"합격자 발표", tip:"1단계·최종 합격자 발표일"},
+      {kw:"등록", tip:"등록금 납부 기간"},
+      {kw:"충원합격", tip:"추가합격(충원) 발표 기간 및 방법"},
+      {kw:"논술 일정", tip:"논술 시험일 — 수능 이전/이후 확인"},
+    ]
+  },
+  {
+    cat:"💰 모집인원 & 경쟁률 예측",
+    color:"green",
+    desc:"인원이 적으면 경쟁률이 높아집니다. 계열별로 반드시 확인하세요.",
+    items:[
+      {kw:"모집인원", tip:"전형별·학과별 모집인원 — 소수모집 주의"},
+      {kw:"수시모집", tip:"수시 전체 규모"},
+      {kw:"정시모집", tip:"정시 전체 규모 및 군별(가나다) 배분"},
+      {kw:"가군", tip:"정시 가군 모집"},
+      {kw:"나군", tip:"정시 나군 모집"},
+      {kw:"다군", tip:"정시 다군 모집"},
+    ]
+  },
+  {
+    cat:"🎓 특별전형 & 기회균형",
+    color:"purple",
+    desc:"해당되는 경우 일반전형보다 유리한 경우가 많습니다.",
+    items:[
+      {kw:"지역균형", tip:"고교장 추천 지역균형 전형"},
+      {kw:"기회균형", tip:"사회배려대상자 기회균형 전형"},
+      {kw:"농어촌", tip:"농어촌 학생 특별전형 — 거주·학교 요건"},
+      {kw:"특성화고", tip:"특성화고 졸업자 전형"},
+      {kw:"사회통합", tip:"사회통합전형 전체 범주"},
+      {kw:"재외국민", tip:"재외국민 특별전형 요건"},
+      {kw:"특기자", tip:"어학·수학·과학·예체능 특기자 전형"},
+      {kw:"저소득", tip:"저소득층 대상 전형"},
+    ]
+  },
+  {
+    cat:"🏥 의약학·특수계열 주요 항목",
+    color:"red",
+    desc:"의대·약대·치대·한의대·간호대 등 특수계열 필수 확인 항목",
+    items:[
+      {kw:"의예", tip:"의예과 모집 규모 및 전형"},
+      {kw:"약학", tip:"약학대학 전형 (약학대 편입 vs 통합 6년)"},
+      {kw:"치의예", tip:"치의예과 전형"},
+      {kw:"한의예", tip:"한의예과 전형"},
+      {kw:"간호", tip:"간호학과 — 수능최저 기준 확인"},
+      {kw:"수의예", tip:"수의예과 전형"},
+      {kw:"면접유형", tip:"인성면접·MMI·제시문면접 등 방식 구분"},
+      {kw:"인·적성", tip:"인적성 검사 실시 여부"},
+      {kw:"과학탐구", tip:"과탐 필수 지정 여부"},
+    ]
+  },
+  {
+    cat:"📝 제출 서류 확인",
+    color:"green",
+    desc:"서류 누락은 불합격 사유가 됩니다. 모든 항목을 체크하세요.",
+    items:[
+      {kw:"제출서류", tip:"학생부·자소서·추천서·증명서 등 목록"},
+      {kw:"학교생활기록부", tip:"학생부 제공 방법 (자동 제공 vs 직접 제출)"},
+      {kw:"졸업증명서", tip:"졸업증명서 제출 대상 및 방법"},
+      {kw:"포트폴리오", tip:"예체능 계열 포트폴리오 요구 여부"},
+    ]
+  },
+  {
+    cat:"🔄 2027학년도 변경사항",
+    color:"imp",
+    desc:"전년도 대비 달라진 점을 반드시 확인하세요.",
+    items:[
+      {kw:"변경사항", tip:"전형 신설·폐지·인원 변경 공지"},
+      {kw:"신설", tip:"새로 생긴 전형 확인"},
+      {kw:"폐지", tip:"없어진 전형 확인"},
+      {kw:"증원", tip:"모집인원 늘어난 전형"},
+      {kw:"감원", tip:"모집인원 줄어든 전형"},
+      {kw:"개편", tip:"전형 방법이 바뀐 경우"},
+    ]
+  },
+];
+
+/* ── 검색어 패널 렌더링 ── */
+function renderKwPanel(){
+  const body=document.getElementById("kwp-body");
+  body.innerHTML = KW_GUIDE.map(cat=>`
+    <div class="kw-cat">
+      <div class="kw-cat-title">${cat.cat}</div>
+      <div class="kw-desc">${cat.desc}</div>
+      <div class="kw-chips" style="margin-top:6px;">
+        ${cat.items.map(item=>`
+          <div class="kw-chip ${cat.color}" onclick="applyKw('${item.kw}')" title="${item.tip}">
+            ${item.kw}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+window.toggleKwPanel = function(){
+  const panel=document.getElementById("kw-panel");
+  if(!panel.classList.contains("open")){ renderKwPanel(); panel.classList.add("open"); }
+  else panel.classList.remove("open");
+};
+window.closeKwPanel = ()=> document.getElementById("kw-panel").classList.remove("open");
+
+window.applyKw = function(kw){
+  globalKwInput.value = kw;
+  saveRecent(kw);
+  runGlobalSearch();
+  toast(`"${kw}" 검색 중…`,"info",1500);
+};
+
+/* ── 스플리터 ── */
+function bindSplitters(){
+  [0,1,2].forEach(i=>{
+    const s=document.getElementById(`splitter${i}`);
+    if(!s) return;
+    s.onmousedown=()=>window[`_rs${i}`]=true;
+  });
+}
+window.addEventListener("mousemove",e=>{
+  const rect=workspace.getBoundingClientRect();
+  const p=((e.clientX-rect.left)/rect.width)*100;
+  if(window._rs0){
+    const max=compareCount===2?80:compareCount===3?58:44;
+    document.documentElement.style.setProperty("--split12",Math.max(20,Math.min(max,p))+"%");
+  }
+  if(window._rs1&&compareCount>=3){
+    const min=compareCount===4?30:42, max=compareCount===4?64:80;
+    document.documentElement.style.setProperty("--split23",Math.max(min,Math.min(max,p))+"%");
+  }
+  if(window._rs2&&compareCount===4){
+    document.documentElement.style.setProperty("--split34",Math.max(55,Math.min(82,p))+"%");
+  }
+});
+window.addEventListener("mouseup",()=>{window._rs0=false;window._rs1=false;window._rs2=false;});
+
+/* ── 노멀라이즈 ── */
+function norm(s){ return (s||"").replace(/\s+/g,"").replace(/[()（）\-_.\[\]]/g,"").replace(/대학입학전형시행계획|대학입학시행계획|대학입학전형|시행계획|2027/gi,"").toLowerCase(); }
+function selectedUni(i){ return inputs[i].value.trim(); }
+
+/* ── 비교 수 전환 ── */
+function setCount(n){
+  compareCount=n;
+  document.getElementById("uniC-group").style.display = n>=3?"":"none";
+  document.getElementById("uniD-group").style.display = n>=4?"":"none";
+  workspace.className = n===2?"workspace two":n===3?"workspace three":"workspace four";
+
+  // ── 패널 너비 균등 분할 자동 설정 ──
+  const r = document.documentElement;
+  if(n===2){ r.style.setProperty("--split12","50%"); }
+  if(n===3){ r.style.setProperty("--split12","33.33%"); r.style.setProperty("--split23","66.66%"); }
+  if(n===4){ r.style.setProperty("--split12","25%");    r.style.setProperty("--split23","50%");    r.style.setProperty("--split34","75%"); }
+
+  const panel = i => `<section class="panel" id="panel${i}"></section>`;
+  const split  = i => `<div class="splitter" id="splitter${i}"></div>`;
+  workspace.innerHTML = n===2
+    ? `${panel(0)}${split(0)}${panel(1)}`
+    : n===3
+    ? `${panel(0)}${split(0)}${panel(1)}${split(1)}${panel(2)}`
+    : `${panel(0)}${split(0)}${panel(1)}${split(1)}${panel(2)}${split(2)}${panel(3)}`;
+  bindSplitters();
+  renderPanels();
+  for(let i=0;i<compareCount;i++) if(states[i].results.length) renderResult(i);
+}
+
+/* ── PDF 파일 연결 ── */
+function connectFolderFiles(){
+  if(!allFolderFiles.length) return;
+  for(let idx=0;idx<compareCount;idx++){
+    const uni=selectedUni(idx), before=states[idx].file?.name||"";
+    let found=null;
+    const uniN=norm(uni);
+    for(const file of allFolderFiles){ if(uniN&&norm(file.name).includes(uniN)){found=file;break;} }
+    if(!found&&uni.includes("(")){
+      const sh=norm(uni.replace(/\(.*?\)/g,"").trim());
+      for(const file of allFolderFiles){ if(sh&&norm(file.name).includes(sh)){found=file;break;} }
+    }
+    if((found?.name||"")!==before){
+      states[idx]={...states[idx],file:found,doc:null,results:[],resultIndex:0,annotations:{}};
+    }
+  }
+}
+
+/* ── 패널 렌더링 ── */
+function renderPanels(){
+  for(let idx=0;idx<compareCount;idx++){
+    const el=document.getElementById(`panel${idx}`); if(!el) continue;
+    const uni=selectedUni(idx), file=states[idx].file;
+    const color=PANEL_COLORS[idx];
+    const sideName=idx===0?"좌측":idx===1?(compareCount===2?"우측":"중앙L"):idx===2?(compareCount===3?"우측":"중앙R"):"우측";
+    const totalPages=states[idx].doc?.numPages||0;
+    const isBrowse=states[idx].mode==="browse";
+
+    el.innerHTML=`
+      <div class="panel-head" style="border-left:3px solid ${color};">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <div class="panel-accent" style="background:${color};box-shadow:0 0 8px ${color}66;flex-shrink:0;"></div>
+          <div style="min-width:0;">
+            <div class="panel-uni">${uni||`비교대학 ${String.fromCharCode(65+idx)}`}</div>
+            <div class="panel-meta">${file?file.name:"연결된 PDF 없음"} · ${sideName}${totalPages?` · 전체 ${totalPages}페이지`:""}</div>
+          </div>
+        </div>
+        <button class="btn sm xs red" id="clearUni-${idx}" title="이 패널 초기화" style="flex-shrink:0;">✕</button>
+      </div>
+
+      <div class="status-bar" id="status-${idx}">
+        <div class="status-dot"></div>
+        <div class="status-text" id="status-text-${idx}">${
+          file
+            ? (isBrowse?"전체 열람 모드 — 자유롭게 페이지를 탐색하세요.":"검색 모드 — 결과 페이지를 탐색합니다.")
+            : (allFolderFiles.length?"폴더 로드됨. 대학명을 입력하세요.":"☁️ Drive 연결 후 대학명을 입력하세요.")
+        }</div>
+        <div class="status-count" id="status-count-${idx}"></div>
+      </div>
+
+      <!-- 모드 탭 -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;">
+        <button class="mode-tab${isBrowse?" active":""}" id="tab-browse-${idx}" onclick="switchMode(${idx},'browse')" style="--tc:${color};">
+          📖 전체 열람
+        </button>
+        <button class="mode-tab${!isBrowse?" active":""}" id="tab-search-${idx}" onclick="switchMode(${idx},'search')" style="--tc:${color};">
+          🔍 키워드 검색
+          ${states[idx].results.length?`<span class="mode-badge">${states[idx].results.length}</span>`:""}
+        </button>
+      </div>
+
+      <!-- 전체 열람 컨트롤 -->
+      <div class="panel-ctrl" id="ctrl-browse-${idx}" style="display:${isBrowse?"flex":"none"};">
+        <div class="ctrl-row">
+          <button class="btn sm" id="pg-first-${idx}" title="첫 페이지">⏮</button>
+          <button class="btn sm" id="pg-prev-${idx}" title="이전 페이지 (,)">◀</button>
+          <div style="display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:4px 8px;">
+            <input type="number" class="page-input" id="pg-input-${idx}"
+              value="${states[idx].browsePageNum||1}" min="1" max="${totalPages||9999}"
+              style="width:44px;background:transparent;border:none;outline:none;text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--gold);">
+            <span style="color:var(--dim);font-size:12px;font-family:'DM Mono',monospace;">/ ${totalPages||"—"}</span>
+          </div>
+          <button class="btn sm" id="pg-next-${idx}" title="다음 페이지 (.)">▶</button>
+          <button class="btn sm" id="pg-last-${idx}" title="마지막 페이지">⏭</button>
+          <select class="scale-select" id="scale-browse-${idx}" title="배율 (±)">
+            ${SCALES.map(s=>`<option value="${s}" ${states[idx].scale===s?"selected":""}>${Math.round(s*100)}%</option>`).join("")}
+          </select>
+          <button class="btn sm xs" id="relink-${idx}" title="폴더 재연결" style="margin-left:auto;">🔗</button>
+        </div>
+        <div class="ctrl-row" style="gap:5px;">
+          <button class="btn sm orange" id="underline-${idx}" data-active="${states[idx].drawing}">🖊 형광펜</button>
+          <button class="btn sm" id="undo-${idx}">↩</button>
+          <button class="btn sm red" id="clearAnno-${idx}">🗑 지우기</button>
+        </div>
+      </div>
+
+      <!-- 키워드 검색 컨트롤 -->
+      <div class="panel-ctrl" id="ctrl-search-${idx}" style="display:${!isBrowse?"flex":"none"};">
+        <div class="ctrl-row">
+          <input class="local-input" id="localKeyword-${idx}" placeholder="이 패널만 별도 검색…" style="border-color:${color}44;">
+          <button class="btn sm blue" id="localSearch-${idx}">검색</button>
+          <button class="btn sm" id="prev-${idx}" title="이전 결과 (,)">◀</button>
+          <button class="btn sm" id="next-${idx}" title="다음 결과 (.)">▶</button>
+          <select class="scale-select" id="scale-${idx}" title="배율 (±)">
+            ${SCALES.map(s=>`<option value="${s}" ${states[idx].scale===s?"selected":""}>${Math.round(s*100)}%</option>`).join("")}
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <select class="result-select" id="resultSelect-${idx}"><option value="">— 결과 페이지 선택 —</option></select>
+          <button class="btn sm orange" id="underline2-${idx}" data-active="${states[idx].drawing}">🖊 형광펜</button>
+          <button class="btn sm" id="undo2-${idx}">↩</button>
+          <button class="btn sm red" id="clearAnno2-${idx}">🗑</button>
+        </div>
+      </div>
+
+      <div class="viewer-wrap" id="viewer-${idx}">
+        <div class="empty-state">
+          <div class="empty-icon">📄</div>
+          <div class="empty-title">${file?"PDF 로딩 중…":"대학을 선택하면 자동으로 열립니다"}</div>
+          <div class="empty-steps">
+            <div class="empty-step"><div class="step-num">1</div><span>상단 <b>✅ Drive 연동완료</b> 상태 확인</span></div>
+            <div class="empty-step"><div class="step-num">2</div><span>비교대학 이름 입력 → <b>자동으로 PDF 열림</b></span></div>
+            <div class="empty-step"><div class="step-num">3</div><span>검색 탭에서 키워드로 바로 이동</span></div>
+          </div>
+        </div>
+      </div>`;
+
+    bindPanelEvents(idx);
+    if(states[idx].results.length) populateResultSelect(idx);
+    // 파일 있으면 즉시 현재 페이지 렌더
+    if(file){
+      if(isBrowse) renderPage(idx, states[idx].browsePageNum||1);
+      else if(states[idx].results.length) renderResult(idx);
+      else renderPage(idx, states[idx].browsePageNum||1);
+    }
+  }
+}
+
+/* ── 모드 전환 ── */
+window.switchMode = function(idx, mode){
+  states[idx].mode = mode;
+  const ctrlBrowse=document.getElementById(`ctrl-browse-${idx}`);
+  const ctrlSearch=document.getElementById(`ctrl-search-${idx}`);
+  const tabBrowse=document.getElementById(`tab-browse-${idx}`);
+  const tabSearch=document.getElementById(`tab-search-${idx}`);
+  if(!ctrlBrowse) return;
+  const isBrowse=mode==="browse";
+  ctrlBrowse.style.display=isBrowse?"flex":"none";
+  ctrlSearch.style.display=!isBrowse?"flex":"none";
+  tabBrowse.classList.toggle("active",isBrowse);
+  tabSearch.classList.toggle("active",!isBrowse);
+  if(isBrowse) renderPage(idx, states[idx].browsePageNum||1);
+  else if(states[idx].results.length) renderResult(idx);
+  else { setStatus(idx,"검색어를 입력하세요."); }
+};
+
+/* ── 패널 이벤트 바인딩 ── */
+function bindPanelEvents(idx){
+  // 공통
+  const g=id=>document.getElementById(id);
+  g(`clearUni-${idx}`)?.addEventListener("click",()=>{
+    inputs[idx].value="";
+    states[idx]={...states[idx],file:null,doc:null,results:[],resultIndex:0,annotations:{},drawing:false,browsePageNum:1,mode:"browse"};
+    renderPanels();
+  });
+  g(`relink-${idx}`)?.addEventListener("click",()=>{
+    connectFolderFiles(); renderPanels();
+    if(states[idx].file) renderPage(idx, states[idx].browsePageNum||1);
+  });
+
+  // ── 전체 열람 컨트롤 ──
+  const pgInput=g(`pg-input-${idx}`);
+  if(pgInput){
+    pgInput.addEventListener("change",()=>{
+      const p=Math.max(1,Math.min(Number(pgInput.value)||1,states[idx].doc?.numPages||1));
+      states[idx].browsePageNum=p; pgInput.value=p; renderPage(idx,p);
+    });
+    pgInput.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){ pgInput.dispatchEvent(new Event("change")); e.preventDefault(); }
+    });
+  }
+  g(`pg-first-${idx}`)?.addEventListener("click",()=>goPage(idx,1));
+  g(`pg-prev-${idx}`)?.addEventListener("click",()=>goPage(idx,(states[idx].browsePageNum||1)-1));
+  g(`pg-next-${idx}`)?.addEventListener("click",()=>goPage(idx,(states[idx].browsePageNum||1)+1));
+  g(`pg-last-${idx}`)?.addEventListener("click",()=>goPage(idx,states[idx].doc?.numPages||1));
+  g(`scale-browse-${idx}`)?.addEventListener("change",e=>{
+    states[idx].scale=Number(e.target.value);
+    renderPage(idx, states[idx].browsePageNum||1);
+  });
+
+  // ── 검색 컨트롤 ──
+  const lk=g(`localKeyword-${idx}`);
+  if(lk){
+    lk.value=states[idx].keyword||"";
+    lk.addEventListener("keydown",e=>{ if(e.key==="Enter") searchPanel(idx,lk.value.trim(),true); });
+  }
+  g(`localSearch-${idx}`)?.addEventListener("click",()=>searchPanel(idx,lk?.value.trim()||"",true));
+  g(`prev-${idx}`)?.addEventListener("click",()=>moveResult(idx,-1));
+  g(`next-${idx}`)?.addEventListener("click",()=>moveResult(idx,1));
+  g(`resultSelect-${idx}`)?.addEventListener("change",e=>{
+    const v=Number(e.target.value); if(!isNaN(v)){ states[idx].resultIndex=v; renderResult(idx); }
+  });
+  g(`scale-${idx}`)?.addEventListener("change",e=>{
+    states[idx].scale=Number(e.target.value);
+    if(states[idx].results.length) renderResult(idx);
+  });
+
+  // ── 형광펜 (두 모드 공통) ──
+  ["underline","underline2"].forEach(id=>{
+    g(`${id}-${idx}`)?.addEventListener("click",()=>{
+      states[idx].drawing=!states[idx].drawing;
+      ["underline","underline2"].forEach(n=>{ const b=g(`${n}-${idx}`); if(b) b.dataset.active=states[idx].drawing; });
+      const vw=g(`viewer-${idx}`); if(vw) vw.classList.toggle("drawing-mode",states[idx].drawing);
+      toast(states[idx].drawing?"형광펜 모드 켜짐":"형광펜 모드 꺼짐","info",1400);
+    });
+  });
+  ["undo","undo2"].forEach(id=>{
+    g(`${id}-${idx}`)?.addEventListener("click",()=>{
+      const pg=currentPageNum(idx); if(!pg) return;
+      const arr=states[idx].annotations[pg]||[]; arr.pop(); states[idx].annotations[pg]=arr;
+      states[idx].mode==="browse"?renderPage(idx,pg):renderResult(idx);
+    });
+  });
+  ["clearAnno","clearAnno2"].forEach(id=>{
+    g(`${id}-${idx}`)?.addEventListener("click",()=>{
+      const pg=currentPageNum(idx); if(!pg) return;
+      states[idx].annotations[pg]=[];
+      states[idx].mode==="browse"?renderPage(idx,pg):renderResult(idx);
+    });
+  });
+}
+
+function currentPageNum(idx){
+  return states[idx].mode==="browse"
+    ? states[idx].browsePageNum
+    : states[idx].results[states[idx].resultIndex]?.pageNum;
+}
+
+/* ── 페이지 이동 (전체 열람 모드) ── */
+async function goPage(idx, p){
+  const doc=await ensureDocument(idx).catch(()=>null);
+  if(!doc) return;
+  p=Math.max(1,Math.min(p,doc.numPages));
+  states[idx].browsePageNum=p;
+  const inp=document.getElementById(`pg-input-${idx}`);
+  if(inp) inp.value=p;
+  await renderPage(idx,p);
+}
+
+/* ── 페이지 렌더링 (열람 모드) ── */
+async function renderPage(idx, pageNum){
+  const viewer=document.getElementById(`viewer-${idx}`); if(!viewer) return;
+  let doc=states[idx].doc;
+  if(!doc){
+    if(!states[idx].file) return;
+    setStatus(idx,"PDF 로딩 중…","loading");
+    try{ doc=await ensureDocument(idx,false); }catch(e){ setStatus(idx,e.message,"error"); return; }
+    // 페이지 수 갱신
+    const metaEl=document.querySelector(`#panel${idx} .panel-meta`);
+    if(metaEl) metaEl.textContent=`${states[idx].file.name} · ${sideName(idx)} · 전체 ${doc.numPages}페이지`;
+    const maxInp=document.getElementById(`pg-input-${idx}`);
+    if(maxInp) maxInp.max=doc.numPages;
+    renderPanelMeta(idx); // 헤더 전체페이지 갱신
+  }
+  pageNum=Math.max(1,Math.min(pageNum,doc.numPages));
+  states[idx].browsePageNum=pageNum;
+
+  const page=await doc.getPage(pageNum);
+  const scale=states[idx].scale||1.4, viewport=page.getViewport({scale}), dpr=Math.max(window.devicePixelRatio||1,2.4);
+
+  const baseCanvas=document.createElement("canvas");
+  baseCanvas.width=Math.floor(viewport.width*dpr); baseCanvas.height=Math.floor(viewport.height*dpr);
+  baseCanvas.style.width=viewport.width+"px"; baseCanvas.style.height=viewport.height+"px";
+  const ctx=baseCanvas.getContext("2d",{alpha:false});
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  await page.render({canvasContext:ctx,viewport}).promise;
+
+  const finalCanvas=document.createElement("canvas");
+  finalCanvas.width=baseCanvas.width; finalCanvas.height=baseCanvas.height;
+  finalCanvas.style.width=baseCanvas.style.width; finalCanvas.style.height=baseCanvas.style.height;
+  const fctx=finalCanvas.getContext("2d",{alpha:false});
+  fctx.filter="contrast(1.15) brightness(1.02)"; fctx.drawImage(baseCanvas,0,0); fctx.filter="none";
+
+  const overlay=document.createElement("canvas");
+  overlay.className="overlay";
+  overlay.width=baseCanvas.width; overlay.height=baseCanvas.height;
+  overlay.style.width=baseCanvas.style.width; overlay.style.height=baseCanvas.style.height;
+
+  viewer.innerHTML=`
+    <div class="result-meta">
+      <span class="tag gold">📄 ${pageNum} / ${doc.numPages}페이지</span>
+      <span class="tag">전체 열람 모드</span>
+    </div>
+    <div class="canvas-wrap" id="wrap-${idx}"></div>`;
+
+  const wrap=document.getElementById(`wrap-${idx}`);
+  wrap.appendChild(finalCanvas); wrap.appendChild(overlay);
+  drawAnnotations(idx,overlay,pageNum);
+  bindAnnotationForPage(idx,overlay,pageNum);
+  bindPan(viewer);
+  setStatus(idx,`${pageNum} / ${doc.numPages} 페이지`,"ok");
+}
+
+function sideName(idx){ return idx===0?"좌측":idx===1?(compareCount===2?"우측":"중앙L"):idx===2?(compareCount===3?"우측":"중앙R"):"우측"; }
+
+function renderPanelMeta(idx){
+  const metaEl=document.querySelector(`#panel${idx} .panel-meta`);
+  const doc=states[idx].doc, file=states[idx].file;
+  if(metaEl&&file) metaEl.textContent=`${file.name} · ${sideName(idx)}${doc?` · 전체 ${doc.numPages}페이지`:""}`;
+}
+
+/* ── 상태 표시 ── */
+function setStatus(idx,msg,type=""){
+  const bar=document.getElementById(`status-${idx}`); if(!bar) return;
+  bar.className=`status-bar ${type}`;
+  bar.querySelector(".status-text").textContent=msg;
+}
+function setStatusCount(idx,n){
+  const el=document.getElementById(`status-count-${idx}`); if(!el) return;
+  el.textContent = n>0?`${n}건`:"";
+}
+
+/* ── PDF 로드 ── */
+async function ensureDocument(idx,force=false){
+  if(states[idx].doc&&!force) return states[idx].doc;
+  if(!states[idx].file) throw new Error("연결된 PDF가 없습니다.");
+  const bytes=await states[idx].file.arrayBuffer();
+  states[idx].doc=await pdfjsLib.getDocument({data:bytes}).promise;
+  return states[idx].doc;
+}
+
+function itemMatches(raw,kw){ return kw&&(raw||"").toLowerCase().includes(kw.toLowerCase()); }
+
+async function flattenOutline(doc){
+  const outline=await doc.getOutline(); if(!outline) return [];
+  const flat=[];
+  async function walk(items){
+    for(const item of items){
+      let dest=item.dest;
+      try{
+        if(typeof dest==="string") dest=await doc.getDestination(dest);
+        if(Array.isArray(dest)&&dest[0]){ const pi=await doc.getPageIndex(dest[0]); flat.push({title:item.title||"",pageNum:pi+1}); }
+      }catch(e){}
+      if(item.items?.length) await walk(item.items);
+    }
+  }
+  await walk(outline); return flat;
+}
+
+async function searchDocument(doc,kw){
+  const results=[],seen=new Set(),outline=await flattenOutline(doc);
+  for(const item of outline){ if(itemMatches(item.title,kw)&&!seen.has(item.pageNum)){seen.add(item.pageNum);results.push({pageNum:item.pageNum,matched:kw,source:"목차"});} }
+  for(let p=1;p<=doc.numPages;p++){
+    if(seen.has(p)) continue;
+    const page=await doc.getPage(p), tc=await page.getTextContent();
+    let found=false;
+    for(const it of tc.items){ if(itemMatches(it.str||"",kw)){found=true;break;} }
+    if(found){seen.add(p);results.push({pageNum:p,matched:kw,source:"전체검색"});}
+  }
+  return results.sort((a,b)=>a.pageNum-b.pageNum);
+}
+
+function populateResultSelect(idx){
+  const sel=document.getElementById(`resultSelect-${idx}`); if(!sel) return;
+  sel.innerHTML=`<option value="">— 결과 페이지 선택 (${states[idx].results.length}건) —</option>`+
+    states[idx].results.map((r,i)=>`<option value="${i}" ${i===states[idx].resultIndex?"selected":""}>${r.pageNum}p · ${r.source}</option>`).join("");
+}
+
+function drawAnnotations(idx,overlay,pageNum){
+  const pg=pageNum??states[idx].results[states[idx].resultIndex]?.pageNum; if(!pg) return;
+  const ctx=overlay.getContext("2d");
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  const arr=states[idx].annotations[pg]||[];
+  ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=states[idx].color;ctx.lineWidth=18;ctx.globalAlpha=.4;
+  arr.forEach(path=>{ if(!path.length) return; ctx.beginPath();ctx.moveTo(path[0].x,path[0].y);for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x,path[i].y);ctx.stroke(); });
+  ctx.globalAlpha=1;
+}
+
+function bindAnnotationForPage(idx,overlay,pageNum){
+  let active=null;
+  overlay.onmousedown=e=>{
+    if(!states[idx].drawing) return;
+    const rect=overlay.getBoundingClientRect(),sx=overlay.width/rect.width,sy=overlay.height/rect.height;
+    active=[{x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy}];
+    const arr=states[idx].annotations[pageNum]||[]; arr.push(active); states[idx].annotations[pageNum]=arr;
+    e.preventDefault();e.stopPropagation();
+  };
+  overlay.onmousemove=e=>{
+    if(!active||!states[idx].drawing) return;
+    const rect=overlay.getBoundingClientRect(),sx=overlay.width/rect.width,sy=overlay.height/rect.height;
+    active.push({x:(e.clientX-rect.left)*sx,y:(e.clientY-rect.top)*sy});
+    drawAnnotations(idx,overlay,pageNum);
+  };
+  window.addEventListener("mouseup",()=>{active=null;},{once:false});
+}
+
+function bindPan(viewer){
+  let down=false,sx=0,sy=0,sl=0,st=0;
+  viewer.onmousedown=e=>{
+    if(states[currentPanel(viewer)]?.drawing) return;
+    if(e.target.classList.contains("overlay")||e.target.tagName==="CANVAS"||e.target.classList.contains("canvas-wrap")){
+      down=true;sx=e.clientX;sy=e.clientY;sl=viewer.scrollLeft;st=viewer.scrollTop;
+    }
+  };
+  window.addEventListener("mousemove",e=>{ if(!down) return; viewer.scrollLeft=sl-(e.clientX-sx);viewer.scrollTop=st-(e.clientY-sy); });
+  window.addEventListener("mouseup",()=>down=false);
+}
+function currentPanel(viewer){ const id=viewer.id; return Number(id.replace("viewer-","")); }
+
+async function renderResult(idx){
+  const viewer=document.getElementById(`viewer-${idx}`); if(!viewer) return;
+  const doc=states[idx].doc, result=states[idx].results[states[idx].resultIndex];
+  if(!doc||!result){ viewer.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">검색 결과 없음</div></div>`; return; }
+
+  const page=await doc.getPage(result.pageNum);
+  const scale=states[idx].scale||1.4, viewport=page.getViewport({scale}), dpr=Math.max(window.devicePixelRatio||1,2.4);
+
+  const baseCanvas=document.createElement("canvas");
+  baseCanvas.width=Math.floor(viewport.width*dpr); baseCanvas.height=Math.floor(viewport.height*dpr);
+  baseCanvas.style.width=viewport.width+"px"; baseCanvas.style.height=viewport.height+"px";
+  const ctx=baseCanvas.getContext("2d",{alpha:false});
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  await page.render({canvasContext:ctx,viewport}).promise;
+
+  const finalCanvas=document.createElement("canvas");
+  finalCanvas.width=baseCanvas.width; finalCanvas.height=baseCanvas.height;
+  finalCanvas.style.width=baseCanvas.style.width; finalCanvas.style.height=baseCanvas.style.height;
+  const fctx=finalCanvas.getContext("2d",{alpha:false});
+  fctx.filter="contrast(1.15) brightness(1.02)"; fctx.drawImage(baseCanvas,0,0); fctx.filter="none";
+
+  const overlay=document.createElement("canvas");
+  overlay.className="overlay";
+  overlay.width=baseCanvas.width; overlay.height=baseCanvas.height;
+  overlay.style.width=baseCanvas.style.width; overlay.style.height=baseCanvas.style.height;
+
+  const textContent=await page.getTextContent(), kw=states[idx].keyword||"";
+  fctx.setTransform(dpr,0,0,dpr,0,0);
+  fctx.fillStyle="rgba(255,240,60,.45)"; fctx.strokeStyle="rgba(240,180,0,.9)"; fctx.lineWidth=1.2;
+  for(const item of textContent.items){
+    const raw=item.str||""; if(!itemMatches(raw,kw)) continue;
+    const tx=pdfjsLib.Util.transform(viewport.transform,item.transform),x=tx[4];
+    const fontH=Math.sqrt(tx[2]*tx[2]+tx[3]*tx[3]),y=tx[5]-fontH;
+    const w=Math.max(item.width*viewport.scale,raw.length*fontH*.5),h=fontH*1.25;
+    fctx.fillRect(x-2,y-1,w+4,h+2);
+    fctx.beginPath();fctx.moveTo(x-1,y+h+1);fctx.lineTo(x+w+1,y+h+1);fctx.stroke();
+  }
+
+  const srcTag=result.source==="목차"?`<span class="tag gold">📑 목차</span>`:`<span class="tag blue">🔍 전체검색</span>`;
+  viewer.innerHTML=`
+    <div class="result-meta">
+      <span class="tag gold">📄 ${result.pageNum}페이지</span>
+      <span class="tag">"${states[idx].keyword||""}"</span>
+      ${srcTag}
+      <span class="tag">${states[idx].resultIndex+1} / ${states[idx].results.length}건</span>
+    </div>
+    <div class="canvas-wrap" id="wrap-${idx}"></div>`;
+
+  const wrap=document.getElementById(`wrap-${idx}`);
+  wrap.appendChild(finalCanvas); wrap.appendChild(overlay);
+  populateResultSelect(idx);
+  drawAnnotations(idx,overlay,result.pageNum);
+  bindAnnotationForPage(idx,overlay,result.pageNum);
+  bindPan(viewer);
+}
+
+async function moveResult(idx,delta){
+  if(!states[idx].results.length) return;
+  const len=states[idx].results.length;
+  states[idx].resultIndex=(states[idx].resultIndex+delta+len)%len;
+  await renderResult(idx);
+}
+
+async function searchPanel(idx,kw,forceReload=false){
+  const uni=selectedUni(idx);
+  if(!uni){ setStatus(idx,"대학을 먼저 선택해 주세요.","error"); return; }
+  if(!states[idx].file){ setStatus(idx,"Drive 연결 후 대학을 선택해 주세요.","error"); return; }
+  if(!kw.trim()){ setStatus(idx,"검색어를 입력해 주세요.","error"); return; }
+  try{
+    states[idx].keyword=kw.trim();
+    setStatus(idx,`"${kw}" 검색 중…`,"loading");
+    const doc=await ensureDocument(idx,forceReload);
+    const results=await searchDocument(doc,kw.trim());
+    states[idx].results=results; states[idx].resultIndex=0;
+    if(!results.length){
+      setStatus(idx,`"${kw}" 검색 결과 없음`,"error");
+      setStatusCount(idx,0);
+      const vw=document.getElementById(`viewer-${idx}`);
+      if(vw) vw.innerHTML=`<div class="empty-state"><div class="empty-icon">😶</div><div class="empty-title">결과 없음</div><div class="empty-desc">"${kw}" 를 찾지 못했습니다.</div></div>`;
+      populateResultSelect(idx); return;
+    }
+    setStatus(idx,`"${kw}" — ${results.length}건 발견`,"ok");
+    setStatusCount(idx,results.length);
+    // 검색 성공 → 자동으로 검색 탭으로 전환
+    states[idx].mode="search";
+    switchMode(idx,"search");  // UI 탭 갱신
+    await renderResult(idx);
+  }catch(err){
+    setStatus(idx,err.message,"error");
+    toast(err.message,"error");
+  }
+}
+
+async function runGlobalSearch(){
+  const kw=globalKwInput.value.trim(); if(!kw) return;
+  saveRecent(kw);
+  await Promise.all([...Array(compareCount).keys()].map(i=>searchPanel(i,kw,false)));
+}
+
+/* ── 키보드 단축키 ── */
+document.addEventListener("keydown",e=>{
+  const tag=document.activeElement.tagName;
+  const inInput=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
+
+  if(e.key==="Escape"){ closeShortcuts(); closeKwPanel(); return; }
+
+  if((e.ctrlKey||e.metaKey)&&e.key==="f"){
+    e.preventDefault(); globalKwInput.focus(); globalKwInput.select(); return;
+  }
+  if(e.altKey&&e.key==="s"){ doSwap(); return; }
+
+  if(!inInput){
+    if(e.key==="ArrowLeft"||e.key===","){
+      e.preventDefault();
+      for(let i=0;i<compareCount;i++){
+        if(states[i].mode==="search"&&states[i].results.length) moveResult(i,-1);
+        else if(states[i].mode==="browse"&&states[i].doc) goPage(i,(states[i].browsePageNum||1)-1);
+      }
+      return;
+    }
+    if(e.key==="ArrowRight"||e.key==="."){
+      e.preventDefault();
+      for(let i=0;i<compareCount;i++){
+        if(states[i].mode==="search"&&states[i].results.length) moveResult(i,1);
+        else if(states[i].mode==="browse"&&states[i].doc) goPage(i,(states[i].browsePageNum||1)+1);
+      }
+      return;
+    }
+    if(e.key==="="||e.key==="+"){ adjustScale(1); return; }
+    if(e.key==="-"||e.key==="_"){ adjustScale(-1); return; }
+  }
+  if(e.key==="Enter"&&document.activeElement===globalKwInput){ e.preventDefault(); runGlobalSearch(); }
+});
+
+function adjustScale(dir){
+  for(let i=0;i<compareCount;i++){
+    const cur=states[i].scale, idx2=SCALES.indexOf(cur);
+    const next=SCALES[Math.max(0,Math.min(SCALES.length-1,idx2+dir))];
+    if(next!==cur){
+      states[i].scale=next;
+      // 두 모드 배율 select 모두 갱신
+      ["scale","scale-browse"].forEach(id=>{
+        const sel=document.getElementById(`${id}-${i}`); if(sel) sel.value=next;
+      });
+      if(states[i].mode==="browse"&&states[i].doc) renderPage(i,states[i].browsePageNum||1);
+      else if(states[i].results.length) renderResult(i);
+    }
+  }
+}
+
+function doSwap(){
+  const a=inputs[0].value,b=inputs[1].value;
+  inputs[0].value=b; inputs[1].value=a;
+  const tmp=states[0]; states[0]=states[1]; states[1]=tmp;
+  renderPanels();
+  toast("A↔B 교환됨","info",1400);
+}
+
+/* ── 이벤트 연결 ── */
+document.getElementById("swapBtn").onclick=doSwap;
+document.getElementById("globalSearchBtn").onclick=runGlobalSearch;
+document.getElementById("twoBtn").onclick=()=>setCount(2);
+document.getElementById("threeBtn").onclick=()=>setCount(3);
+document.getElementById("fourBtn").onclick=()=>setCount(4);
+
+/* ── 전체 검색 초기화 ── */
+function resetGlobalSearch(){
+  globalKwInput.value = "";
+  // 최근 검색어 칩 초기화
+  recentSearches = [];
+  localStorage.removeItem("recentKw");
+  renderRecent();
+  // 모든 패널 대학 선택 + 상태 완전 초기화 (X 버튼 효과)
+  for(let i=0;i<compareCount;i++){
+    inputs[i].value = "";
+    states[i]={...states[i], file:null, doc:null, results:[], resultIndex:0,
+               keyword:"", mode:"browse", browsePageNum:1, annotations:{}, drawing:false};
+  }
+  renderPanels();
+  toast("🔄 초기화 완료 — 대학을 새로 선택하세요","info",2500);
+}
+document.getElementById("globalResetBtn").onclick = resetGlobalSearch;
+
+/* ── 대학 입력: change + keydown Enter + blur 모두 처리 ── */
+inputs.forEach((inp,idx)=>inp.addEventListener("change",()=>{
+  if(allFolderFiles.length) connectFolderFiles();
+  states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+  renderPanels();
+  if(idx<compareCount && states[idx].file) renderPage(idx,1);
+}));
+
+/* Enter 키로 직접 입력 후 확정하는 경우 change 이벤트 보완 */
+inputs.forEach((inp,idx)=>inp.addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  e.preventDefault();
+  inp.blur();   // blur → change 이벤트 트리거
+  setTimeout(()=>{
+    if(allFolderFiles.length) connectFolderFiles();
+    states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+    renderPanels();
+    if(idx<compareCount && states[idx].file) renderPage(idx,1);
+  },50);
+}));
+
+/* ══════════════════════════════════════════════
+   ☁️  Google Apps Script 프록시 방식 (API Key 불필요)
+   ══════════════════════════════════════════════ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzqbHdKnQPGlBsS38ea-ngnqGcF6rOLSmDpzPjtELb-drZSkWg4LYrGV48l9InfFVdsgg/exec";
+const LS_DRIVE_KEY    = "viewer2027_driveApiKey";
+const LS_DRIVE_FOLDER = "viewer2027_driveFolderId";
+
+window.openDriveModal = function(){
+  const btn = document.getElementById("driveBtn");
+  // 이미 연동완료 → 모달 없이 재연결 토스트
+  if(btn && btn.classList.contains("green")){
+    toastConfirm("Drive PDF를 다시 불러올까요?", "🔄 다시 불러오기", connectDrive);
+    return;
+  }
+  document.getElementById("drive-modal").classList.add("open");
+};
+window.closeDriveModal = function(){
+  document.getElementById("drive-modal").classList.remove("open");
+};
+window.clearDriveSettings = function(){
+  localStorage.removeItem(LS_DRIVE_KEY);
+  localStorage.removeItem(LS_DRIVE_FOLDER);
+  toast("Drive 설정이 초기화되었습니다.","info");
+};
+document.getElementById("drive-modal").addEventListener("click", e=>{
+  if(e.target===document.getElementById("drive-modal")) closeDriveModal();
+});
+
+function setDriveConnected(connected){
+  const btn = document.getElementById("driveBtn");
+  if(!btn) return;
+  if(connected){
+    btn.className = "btn sm green";
+    btn.innerHTML = "✅ Drive 연동완료";
+    btn.title = "클릭하면 다시 불러옵니다";
+  } else {
+    btn.className = "btn sm blue";
+    btn.innerHTML = "☁️ Drive 연결";
+    btn.title = "Google Drive에서 PDF 불러오기";
+  }
+}
+
+function setDriveProgress(active, msg="", pct=0){
+  const el   = document.getElementById("driveProgress");
+  const txt  = document.getElementById("driveProgressText");
+  const fill = document.getElementById("driveProgressFill");
+  if(!el) return;
+  el.classList.toggle("active", active);
+  if(txt)  txt.textContent  = msg;
+  if(fill) fill.style.width = pct + "%";
+}
+function setDriveBtn(loading){
+  const btn = document.getElementById("driveConnectBtn");
+  if(!btn) return;
+  btn.disabled    = loading;
+  btn.textContent = loading ? "⏳ 불러오는 중…" : "☁️ Drive에서 불러오기";
+}
+
+/* ── GAS 경유 파일 목록 조회 ── */
+async function gasListFiles(){
+  const res  = await fetch(`${GAS_URL}?action=list`);
+  if(!res.ok) throw new Error(`목록 조회 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || "목록 조회 오류");
+  return data.files; // [{id, name}, ...]
+}
+
+/* ── GAS 경유 PDF 다운로드 (Base64 → File) ── */
+async function gasDownloadFile(fileId, fileName){
+  const res  = await fetch(`${GAS_URL}?action=file&id=${fileId}`);
+  if(!res.ok) throw new Error(`${fileName} 다운로드 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || `${fileName} 오류`);
+  const bin  = atob(data.data);
+  const arr  = new Uint8Array(bin.length).map((_,i) => bin.charCodeAt(i));
+  return new File([arr], fileName, {type:"application/pdf"});
+}
+
+/* ── 메인 연결 함수 ── */
+window.connectDrive = async function(){
+  setDriveBtn(true);
+  setDriveProgress(true,"📋 파일 목록 조회 중…",5);
+  try{
+    const driveFiles = await gasListFiles();
+    if(!driveFiles.length) throw new Error("폴더에 PDF 파일이 없습니다.");
+    setDriveProgress(true,`${driveFiles.length}개 PDF 발견 — 다운로드 시작…`,10);
+
+    const CHUNK=5; const fileObjs=[];
+    for(let i=0;i<driveFiles.length;i+=CHUNK){
+      const chunk   = driveFiles.slice(i,i+CHUNK);
+      const results = await Promise.allSettled(chunk.map(f=>gasDownloadFile(f.id,f.name)));
+      for(const r of results) if(r.status==="fulfilled"&&r.value) fileObjs.push(r.value);
+      const pct = Math.round(10+((i+CHUNK)/driveFiles.length)*88);
+      setDriveProgress(true,
+        `⏳ ${fileObjs.length} / ${driveFiles.length}개 다운로드 중…`,
+        Math.min(pct,98));
+    }
+    if(!fileObjs.length) throw new Error("다운로드된 파일이 없습니다.");
+    setDriveProgress(true,`✅ ${fileObjs.length}개 완료!`,100);
+    await new Promise(r=>setTimeout(r,600));
+    closeDriveModal();                            // ← 100% 확인 후 즉시 닫기
+    await new Promise(r=>setTimeout(r,100));
+    applyFiles(fileObjs,"Google Drive ☁️",false);
+    setDriveConnected(true);
+    toast(`☁️ Drive 연결 완료 — ${fileObjs.length}개 PDF 로드됨`,"ok",3500);
+  }catch(err){
+    setDriveProgress(false);
+    toast("❌ "+err.message,"error",6000);
+    console.error("[GAS]",err);
+  }finally{
+    closeDriveModal();   // 오류 시에도 반드시 닫힘
+    setDriveBtn(false);
+  }
+};
+
+async function tryDriveAutoLoad(){
+  try{
+    setFolderStatus("⏳ Google Drive 자동 연결 중…");
+    const driveFiles = await gasListFiles();
+    if(!driveFiles.length) return false;
+    setFolderStatus(`📋 Drive ${driveFiles.length}개 파일 다운로드 중…`);
+    const CHUNK=5; const fileObjs=[];
+    for(let i=0;i<driveFiles.length;i+=CHUNK){
+      const chunk=driveFiles.slice(i,i+CHUNK);
+      const results=await Promise.allSettled(chunk.map(f=>gasDownloadFile(f.id,f.name)));
+      for(const r of results) if(r.status==="fulfilled"&&r.value) fileObjs.push(r.value);
+    }
+    if(!fileObjs.length) return false;
+    applyFiles(fileObjs,"Google Drive ☁️",true);
+    setDriveConnected(true);
+    toast(`☁️ Drive 자동 연결 완료 — ${fileObjs.length}개 PDF`,"ok",3000);
+    return true;
+  } catch(e){
+    console.warn("[GAS 자동복원 실패]",e.message);
+    setFolderStatus(""); return false;
+  }
+}
+
+/* ── 라이트/다크 모드 토글 ── */
+window.toggleTheme = function(){
+  const isLight = document.documentElement.classList.toggle("light");
+  localStorage.setItem("viewer2027_theme", isLight ? "light" : "dark");
+};
+// 저장된 테마 복원
+if(localStorage.getItem("viewer2027_theme") === "light"){
+  document.documentElement.classList.add("light");
+}
+
+/* ── 초기 렌더 + 자동 폴더 복원 ── */
+setCount(2);
+// file:// 직접 실행 시에도 GAS 자동 연결 시도
+tryAutoRestore();
+</script>
+</body>
+</html>
