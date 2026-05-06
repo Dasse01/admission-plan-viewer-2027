@@ -215,6 +215,26 @@ button{cursor:pointer;}
 .strip-hint kbd{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 4px;font-size:10px;font-family:'DM Mono',monospace;}
 datalist{display:none;}
 
+/* ── 커스텀 대학 드롭다운 ── */
+.uni-wrap{position:relative;}
+.uni-dropdown{
+  position:fixed;z-index:99999;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+  max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.45);
+  display:none;min-width:200px;
+}
+.uni-dropdown.open{display:block;}
+.uni-dropdown-item{
+  padding:11px 14px;cursor:pointer;font-size:13px;color:var(--text);
+  border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background .1s;
+}
+.uni-dropdown-item:last-child{border-bottom:none;}
+.uni-dropdown-item:hover,.uni-dropdown-item.active{background:var(--bg3);}
+.uni-dropdown-item mark{background:none;color:var(--gold);font-weight:700;}
+html.light .uni-dropdown{background:var(--bg2);box-shadow:0 8px 32px rgba(0,0,0,.15);}
+html.light .uni-dropdown-item:hover{background:var(--bg3);}
+
 /* ── 워크스페이스 ────────────────────────────────── */
 .workspace{height:100%;overflow:hidden;display:grid;gap:0;}
 .workspace.two  {grid-template-columns:minmax(300px,var(--split12)) 8px minmax(300px,calc(100% - var(--split12)));}
@@ -606,19 +626,19 @@ canvas{display:block;}
   <div class="toolbar">
     <div class="tf-group">
       <div class="tf-label">🟠 비교대학 A</div>
-      <input class="tf-input uni-a" id="uniA" list="unilist" placeholder="대학명 입력 또는 선택">
+      <div class="uni-wrap"><input class="tf-input uni-a" id="uniA" placeholder="대학명 입력 또는 선택" autocomplete="off"><div class="uni-dropdown" id="drop_uniA"></div></div>
     </div>
     <div class="tf-group">
       <div class="tf-label">🟢 비교대학 B</div>
-      <input class="tf-input uni-b" id="uniB" list="unilist" placeholder="대학명 입력 또는 선택">
+      <div class="uni-wrap"><input class="tf-input uni-b" id="uniB" placeholder="대학명 입력 또는 선택" autocomplete="off"><div class="uni-dropdown" id="drop_uniB"></div></div>
     </div>
     <div class="tf-group" id="uniC-group" style="display:none">
       <div class="tf-label">🟣 비교대학 C</div>
-      <input class="tf-input uni-c" id="uniC" list="unilist" placeholder="3·4개 비교 때만 사용">
+      <div class="uni-wrap"><input class="tf-input uni-c" id="uniC" placeholder="3·4개 비교 때만 사용" autocomplete="off"><div class="uni-dropdown" id="drop_uniC"></div></div>
     </div>
     <div class="tf-group" id="uniD-group" style="display:none">
       <div class="tf-label">🔵 비교대학 D</div>
-      <input class="tf-input uni-d" id="uniD" list="unilist" placeholder="4개 비교 때만 사용">
+      <div class="uni-wrap"><input class="tf-input uni-d" id="uniD" placeholder="4개 비교 때만 사용" autocomplete="off"><div class="uni-dropdown" id="drop_uniD"></div></div>
     </div>
     <div class="divider-v"></div>
     <div class="tf-group" style="flex:1;min-width:180px;">
@@ -878,12 +898,120 @@ let states = [0,1,2,3].map(i=>({
 }));
 
 /* ── 대학 목록 초기화 (폴더 로드 전: 전체 목록) ── */
+let _uniMasterList = [];
+
 function refreshUniList(labels){
-  const list = labels && labels.length ? labels : RECORDS;
-  document.getElementById("unilist").innerHTML = list.map(n=>`<option value="${n}"></option>`).join("");
-  document.getElementById("uniCount").textContent = `${list.length}개 대학`;
+  _uniMasterList = labels && labels.length ? labels : RECORDS;
+  const dl = document.getElementById("unilist");
+  if(dl) dl.innerHTML = _uniMasterList.map(n=>`<option value="${n}"></option>`).join("");
+  document.getElementById("uniCount").textContent = `${_uniMasterList.length}개 대학`;
 }
 refreshUniList(null);
+
+/* ── 커스텀 드롭다운 ── */
+function _escRe(s){ return s.split("").map(c=>"\\^$.|?*+()[]{}".includes(c)?"\\"+c:c).join(""); }
+
+function _positionDrop(dropEl, inp){
+  const r = inp.getBoundingClientRect();
+  dropEl.style.left  = r.left + "px";
+  dropEl.style.top   = (r.bottom + 4) + "px";
+  dropEl.style.width = r.width + "px";
+}
+
+function _renderDropItems(dropEl, inp, items){
+  const q = (inp.value||"").trim();
+  if(!items.length){ dropEl.classList.remove("open"); return; }
+  dropEl.innerHTML = items.slice(0,100).map(name=>{
+    const hi = q ? name.replace(new RegExp("("+_escRe(q)+")","gi"),"<mark>$1</mark>") : name;
+    return `<div class="uni-dropdown-item" data-val="${name}">${hi}</div>`;
+  }).join("");
+  dropEl.querySelectorAll(".uni-dropdown-item").forEach(item=>{
+    const handler = e=>{ e.preventDefault(); e.stopPropagation(); _selectUni(inp, dropEl, item.dataset.val); };
+    item.addEventListener("mousedown", handler);
+    item.addEventListener("touchstart", handler, {passive:false});
+  });
+  _positionDrop(dropEl, inp);
+  dropEl.classList.add("open");
+}
+
+function _selectUni(inp, dropEl, val){
+  inp.value = val;
+  dropEl.classList.remove("open");
+  // change 이벤트 직접 발생
+  inp.dispatchEvent(new Event("change", {bubbles:true}));
+}
+
+function _closeAllDrops(except){
+  document.querySelectorAll(".uni-dropdown").forEach(d=>{ if(d!==except) d.classList.remove("open"); });
+}
+
+document.addEventListener("click", e=>{
+  if(!e.target.closest(".uni-wrap")) _closeAllDrops(null);
+});
+document.addEventListener("touchend", e=>{
+  if(!e.target.closest(".uni-wrap")) _closeAllDrops(null);
+});
+
+// 각 입력란에 드롭다운 이벤트 연결 (DOM 로드 후)
+function _filterList(q){
+  if(!q) return _uniMasterList;
+  const nq = q.replace(/\s/g,"");
+  return _uniMasterList.filter(n=>n.replace(/\s/g,"").includes(nq));
+}
+
+function _bindUniDrops(){
+  ["uniA","uniB","uniC","uniD"].forEach(id=>{
+    const inp = document.getElementById(id);
+    const drop = document.getElementById("drop_"+id);
+    if(!inp||!drop) return;
+    // overflow 컨테이너 탈출: body로 이동
+    document.body.appendChild(drop);
+
+    // 포커스/클릭 → 전체 목록 표시 (입력값으로 필터)
+    inp.addEventListener("focus", ()=>{
+      _closeAllDrops(drop);
+      _renderDropItems(drop, inp, _filterList(inp.value.trim()));
+    });
+    inp.addEventListener("click", ()=>{
+      _renderDropItems(drop, inp, _filterList(inp.value.trim()));
+    });
+    // 스크롤/리사이즈 시 위치 재계산
+    window.addEventListener("scroll", ()=>{ if(drop.classList.contains("open")) _positionDrop(drop,inp); }, true);
+    window.addEventListener("resize", ()=>{ if(drop.classList.contains("open")) _positionDrop(drop,inp); });
+    // 타이핑 → 실시간 필터
+    inp.addEventListener("input", ()=>{
+      _renderDropItems(drop, inp, _filterList(inp.value.trim()));
+    });
+    // blur: 드롭다운 항목 클릭/터치 중이면 닫지 않음
+    inp.addEventListener("blur", ()=>{
+      setTimeout(()=>{ if(!drop.matches(":hover")) drop.classList.remove("open"); }, 250);
+    });
+    // 키보드 탐색
+    inp.addEventListener("keydown", e=>{
+      const items = drop.querySelectorAll(".uni-dropdown-item");
+      const cur   = drop.querySelector(".uni-dropdown-item.active");
+      if(e.key==="ArrowDown"){
+        e.preventDefault();
+        const next = cur ? (cur.nextElementSibling||items[0]) : items[0];
+        cur && cur.classList.remove("active");
+        next && next.classList.add("active");
+        next && next.scrollIntoView({block:"nearest"});
+      } else if(e.key==="ArrowUp"){
+        e.preventDefault();
+        const prev = cur ? (cur.previousElementSibling||items[items.length-1]) : items[items.length-1];
+        cur && cur.classList.remove("active");
+        prev && prev.classList.add("active");
+        prev && prev.scrollIntoView({block:"nearest"});
+      } else if(e.key==="Enter"){
+        const active = drop.querySelector(".uni-dropdown-item.active");
+        if(active){ e.preventDefault(); _selectUni(inp, drop, active.dataset.val); }
+      } else if(e.key==="Escape"){
+        drop.classList.remove("open");
+      }
+    });
+  });
+}
+setTimeout(_bindUniDrops, 0);
 
 /* ══ IndexedDB — 폴더 핸들 영구 저장 ══ */
 const IDB_NAME="viewer2027", IDB_STORE="handles", IDB_KEY="dataFolder";
