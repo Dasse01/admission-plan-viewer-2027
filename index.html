@@ -785,19 +785,18 @@ canvas{display:block;}
 <script type="module">
 import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
 
-/* ── file:// 프로토콜 대응: 워커를 Blob URL로 우회 ── */
+/* ── PDF.js Worker: 항상 Blob URL로 로드 (CSP 우회) ── */
 (async()=>{
   const workerUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
-  if(location.protocol === "file:"){
-    try{
-      const res  = await fetch(workerUrl);
-      const blob = await res.blob();
-      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
-    } catch(e){
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl; // fallback
-    }
-  } else {
+  try{
+    const res  = await fetch(workerUrl);
+    const blob = await res.blob();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    console.log("[PDF.js] Worker blob URL 설정 완료");
+  } catch(e){
+    // blob 실패 시 직접 URL fallback
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+    console.warn("[PDF.js] Worker fallback (CDN URL):", e.message);
   }
 })();
 
@@ -1799,9 +1798,18 @@ function setStatusCount(idx,n){
 }
 
 /* ── PDF 로드 ── */
+/* Worker 준비 대기 플래그 */
+let _workerReady = false;
+const _workerReadyPromise = new Promise(resolve=>{
+  const check=()=>{ if(pdfjsLib.GlobalWorkerOptions.workerSrc){ _workerReady=true; resolve(); } else setTimeout(check,50); };
+  setTimeout(check,50);
+});
+
 async function ensureDocument(idx,force=false){
   if(states[idx].doc&&!force) return states[idx].doc;
   if(!states[idx].file) throw new Error("연결된 PDF가 없습니다.");
+  // Worker 준비될 때까지 최대 5초 대기
+  if(!_workerReady) await Promise.race([_workerReadyPromise, new Promise(r=>setTimeout(r,5000))]);
   const bytes=await states[idx].file.arrayBuffer();
   states[idx].doc=await pdfjsLib.getDocument({data:bytes}).promise;
   return states[idx].doc;
