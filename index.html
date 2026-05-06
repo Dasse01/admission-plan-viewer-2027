@@ -1503,9 +1503,8 @@ function connectFolderFiles(){
 }
 
 /* ── 패널 렌더링 ── */
-function renderPanels(){
-  for(let idx=0;idx<compareCount;idx++){
-    const el=document.getElementById(`panel${idx}`); if(!el) continue;
+function renderPanel(idx){
+    const el=document.getElementById(`panel${idx}`); if(!el) return;
     const uni=selectedUni(idx), file=states[idx].file;
     const color=PANEL_COLORS[idx];
     const sideName=idx===0?"좌측":idx===1?(compareCount===2?"우측":"중앙L"):idx===2?(compareCount===3?"우측":"중앙R"):"우측";
@@ -1603,13 +1602,11 @@ function renderPanels(){
 
     bindPanelEvents(idx);
     if(states[idx].results.length) populateResultSelect(idx);
-    // 파일 있으면 즉시 현재 페이지 렌더
-    if(file){
-      if(isBrowse) renderPage(idx, states[idx].browsePageNum||1);
-      else if(states[idx].results.length) renderResult(idx);
-      else renderPage(idx, states[idx].browsePageNum||1);
-    }
-  }
+    // renderPage는 호출부에서 명시적으로 수행 (이중 호출 방지)
+}
+
+function renderPanels(){
+  for(let i=0;i<compareCount;i++) renderPanel(i);
 }
 
 /* ── 모드 전환 ── */
@@ -1726,17 +1723,20 @@ async function goPage(idx, p){
 /* ── 페이지 렌더링 (열람 모드) ── */
 async function renderPage(idx, pageNum){
   const viewer=document.getElementById(`viewer-${idx}`); if(!viewer) return;
+  const viewerId = viewer; // stale 체크용 참조 보존
   let doc=states[idx].doc;
   if(!doc){
     if(!states[idx].file) return;
     setStatus(idx,"PDF 로딩 중…","loading");
     try{ doc=await ensureDocument(idx,false); }catch(e){ setStatus(idx,e.message,"error"); return; }
+    // ── Stale 체크: async 중 DOM이 교체됐으면 중단 ──
+    if(document.getElementById(`viewer-${idx}`) !== viewerId) return;
     // 페이지 수 갱신
     const metaEl=document.querySelector(`#panel${idx} .panel-meta`);
     if(metaEl) metaEl.textContent=`${states[idx].file.name} · ${sideName(idx)} · 전체 ${doc.numPages}페이지`;
     const maxInp=document.getElementById(`pg-input-${idx}`);
     if(maxInp) maxInp.max=doc.numPages;
-    renderPanelMeta(idx); // 헤더 전체페이지 갱신
+    renderPanelMeta(idx);
   }
   pageNum=Math.max(1,Math.min(pageNum,doc.numPages));
   states[idx].browsePageNum=pageNum;
@@ -1750,6 +1750,8 @@ async function renderPage(idx, pageNum){
   const ctx=baseCanvas.getContext("2d",{alpha:false});
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
   await page.render({canvasContext:ctx,viewport}).promise;
+  // ── Stale 체크: 렌더 완료 후에도 DOM 교체 확인 ──
+  if(document.getElementById(`viewer-${idx}`) !== viewerId) return;
 
   const finalCanvas=document.createElement("canvas");
   finalCanvas.width=baseCanvas.width; finalCanvas.height=baseCanvas.height;
@@ -2067,34 +2069,38 @@ function resetGlobalSearch(){
 document.getElementById("globalResetBtn").onclick = resetGlobalSearch;
 
 /* ── 대학 입력: change + keydown Enter + blur 모두 처리 ── */
-inputs.forEach((inp,idx)=>inp.addEventListener("change",async()=>{
-  states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+async function handleUniSelect(idx){
+  // 1단계: 해당 패널만 초기화 + 로딩 표시 (다른 패널 영향 없음)
+  states[idx]={...states[idx],file:null,doc:null,results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+  renderPanel(idx);
+
+  // 2단계: 파일 확보 (Drive lazy load 또는 로컬)
+  let file = null;
   if(driveFileMap.length){
-    const file = await lazyLoadDriveFile(idx);
-    if(file) states[idx]={...states[idx],file,doc:null};
+    file = await lazyLoadDriveFile(idx);
   } else if(allFolderFiles.length){
     connectFolderFiles();
+    file = states[idx].file || null;
   }
-  renderPanels();
-  if(idx<compareCount && states[idx].file) renderPage(idx,1);
-}));
 
-/* Enter 키로 직접 입력 후 확정하는 경우 change 이벤트 보완 */
-inputs.forEach((inp,idx)=>inp.addEventListener("keydown",async e=>{
+  if(!file){ renderPanel(idx); return; }
+
+  // 3단계: 파일 세팅 후 해당 패널만 재렌더 (viewer DOM 생성)
+  states[idx] = {...states[idx], file, doc:null};
+  renderPanel(idx);
+
+  // 4단계: viewer DOM이 확실히 존재하는 상태에서 renderPage
+  if(idx < compareCount) await renderPage(idx, 1);
+}
+
+inputs.forEach((inp,idx)=>inp.addEventListener("change", ()=>{ handleUniSelect(idx); }));
+
+/* Enter 키로 직접 입력 후 확정하는 경우 */
+inputs.forEach((inp,idx)=>inp.addEventListener("keydown", e=>{
   if(e.key!=="Enter") return;
   e.preventDefault();
   inp.blur();
-  setTimeout(async()=>{
-    states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
-    if(driveFileMap.length){
-      const file = await lazyLoadDriveFile(idx);
-      if(file) states[idx]={...states[idx],file,doc:null};
-    } else if(allFolderFiles.length){
-      connectFolderFiles();
-    }
-    renderPanels();
-    if(idx<compareCount && states[idx].file) renderPage(idx,1);
-  },50);
+  setTimeout(()=>handleUniSelect(idx), 50);
 }));
 
 /* ══════════════════════════════════════════════
