@@ -1939,21 +1939,31 @@ function resetGlobalSearch(){
 document.getElementById("globalResetBtn").onclick = resetGlobalSearch;
 
 /* ── 대학 입력: change + keydown Enter + blur 모두 처리 ── */
-inputs.forEach((inp,idx)=>inp.addEventListener("change",()=>{
-  if(allFolderFiles.length) connectFolderFiles();
+inputs.forEach((inp,idx)=>inp.addEventListener("change",async()=>{
   states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+  if(driveFileMap.length){
+    const file = await lazyLoadDriveFile(idx);
+    if(file) states[idx]={...states[idx],file,doc:null};
+  } else if(allFolderFiles.length){
+    connectFolderFiles();
+  }
   renderPanels();
   if(idx<compareCount && states[idx].file) renderPage(idx,1);
 }));
 
 /* Enter 키로 직접 입력 후 확정하는 경우 change 이벤트 보완 */
-inputs.forEach((inp,idx)=>inp.addEventListener("keydown",e=>{
+inputs.forEach((inp,idx)=>inp.addEventListener("keydown",async e=>{
   if(e.key!=="Enter") return;
   e.preventDefault();
-  inp.blur();   // blur → change 이벤트 트리거
-  setTimeout(()=>{
-    if(allFolderFiles.length) connectFolderFiles();
+  inp.blur();
+  setTimeout(async()=>{
     states[idx]={...states[idx],results:[],resultIndex:0,keyword:"",mode:"browse",browsePageNum:1};
+    if(driveFileMap.length){
+      const file = await lazyLoadDriveFile(idx);
+      if(file) states[idx]={...states[idx],file,doc:null};
+    } else if(allFolderFiles.length){
+      connectFolderFiles();
+    }
     renderPanels();
     if(idx<compareCount && states[idx].file) renderPage(idx,1);
   },50);
@@ -1962,7 +1972,7 @@ inputs.forEach((inp,idx)=>inp.addEventListener("keydown",e=>{
 /* ══════════════════════════════════════════════
    ☁️  Google Apps Script 프록시 방식 (API Key 불필요)
    ══════════════════════════════════════════════ */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzqbHdKnQPGlBsS38ea-ngnqGcF6rOLSmDpzPjtELb-drZSkWg4LYrGV48l9InfFVdsgg/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbz0Szs6wLaJqfyEFZkrF5XGsryw6iF9xXM7suaoiDV7aEpl_2bekVhjXFHacUA4cLm1cg/exec";
 const LS_DRIVE_KEY    = "viewer2027_driveApiKey";
 const LS_DRIVE_FOLDER = "viewer2027_driveFolderId";
 
@@ -2026,7 +2036,7 @@ async function gasListFiles(){
   return data.files; // [{id, name}, ...]
 }
 
-/* ── GAS 경유 PDF 다운로드 (Base64 → File) ── */
+/* ── GAS 경유 PDF 단건 다운로드 (Base64 → File) ── */
 async function gasDownloadFile(fileId, fileName){
   const res  = await fetch(`${GAS_URL}?action=file&id=${fileId}`);
   if(!res.ok) throw new Error(`${fileName} 다운로드 실패 (HTTP ${res.status})`);
@@ -2037,62 +2047,97 @@ async function gasDownloadFile(fileId, fileName){
   return new File([arr], fileName, {type:"application/pdf"});
 }
 
-/* ── 메인 연결 함수 ── */
+/* ── Drive 파일 목록 (Lazy Loading용) ── */
+let driveFileMap = []; // [{id, name}]
+
+/* ── Lazy: 대학 선택 시 해당 PDF만 단건 다운로드 ── */
+async function lazyLoadDriveFile(idx){
+  if(!driveFileMap.length) return null;
+  const uniN = norm(inputs[idx].value.trim());
+  if(!uniN) return null;
+  // 캐시 확인
+  const cached = allFolderFiles.find(f=>{
+    const fn=norm(f.name.replace(/\.pdf$/i,""));
+    return fn.includes(uniN)||uniN.includes(fn);
+  });
+  if(cached) return cached;
+  // Drive 목록에서 매칭
+  const entry = driveFileMap.find(f=>{
+    const fn=norm(f.name.replace(/\.pdf$/i,""));
+    return fn.includes(uniN)||uniN.includes(fn);
+  });
+  if(!entry) return null;
+  try{
+    const file = await gasDownloadFile(entry.id, entry.name);
+    allFolderFiles.push(file); // 캐시에 저장
+    return file;
+  } catch(e){
+    toast(`❌ ${entry.name} 로드 실패`,"error",4000);
+    return null;
+  }
+}
+
+/* ── Drive 연결: 목록만 받고 즉시 완료 ── */
 window.connectDrive = async function(){
   setDriveBtn(true);
-  setDriveProgress(true,"📋 파일 목록 조회 중…",5);
+  setDriveProgress(true,"📋 파일 목록 조회 중…",50);
   try{
-    const driveFiles = await gasListFiles();
-    if(!driveFiles.length) throw new Error("폴더에 PDF 파일이 없습니다.");
-    setDriveProgress(true,`${driveFiles.length}개 PDF 발견 — 다운로드 시작…`,10);
+    const list = await gasListFiles();
+    if(!list.length) throw new Error("폴더에 PDF 파일이 없습니다.");
 
-    const CHUNK=5; const fileObjs=[];
-    for(let i=0;i<driveFiles.length;i+=CHUNK){
-      const chunk   = driveFiles.slice(i,i+CHUNK);
-      const results = await Promise.allSettled(chunk.map(f=>gasDownloadFile(f.id,f.name)));
-      for(const r of results) if(r.status==="fulfilled"&&r.value) fileObjs.push(r.value);
-      const pct = Math.round(10+((i+CHUNK)/driveFiles.length)*88);
-      setDriveProgress(true,
-        `⏳ ${fileObjs.length} / ${driveFiles.length}개 다운로드 중…`,
-        Math.min(pct,98));
-    }
-    if(!fileObjs.length) throw new Error("다운로드된 파일이 없습니다.");
-    setDriveProgress(true,`✅ ${fileObjs.length}개 완료!`,100);
-    await new Promise(r=>setTimeout(r,600));
-    closeDriveModal();                            // ← 100% 확인 후 즉시 닫기
-    await new Promise(r=>setTimeout(r,100));
-    applyFiles(fileObjs,"Google Drive ☁️",false);
+    driveFileMap   = list;
+    allFolderFiles = [];
+
+    // RECORDS와 매칭해 드롭다운 구성
+    availableLabels = RECORDS.filter(label=>{
+      const ln=norm(label);
+      return list.some(f=>{ const fn=norm(f.name.replace(/\.pdf$/i,"")); return fn.includes(ln)||ln.includes(fn); });
+    });
+    if(!availableLabels.length) availableLabels=[...RECORDS];
+    refreshUniList([...availableLabels]);
+
+    const matched=availableLabels.length;
+    document.getElementById("folder-status").textContent=
+      `☁️ Google Drive · PDF ${list.length}개 · 매칭 ${matched}개`;
+
+    setDriveProgress(true,`✅ ${list.length}개 확인 — 대학 선택 시 즉시 로드됩니다`,100);
+    await new Promise(r=>setTimeout(r,500));
     setDriveConnected(true);
-    toast(`☁️ Drive 연결 완료 — ${fileObjs.length}개 PDF 로드됨`,"ok",3500);
+    toast(`☁️ Drive 연결 완료 — ${matched}개 대학 선택 가능!`,"ok",3500);
   }catch(err){
     setDriveProgress(false);
     toast("❌ "+err.message,"error",6000);
     console.error("[GAS]",err);
   }finally{
-    closeDriveModal();   // 오류 시에도 반드시 닫힘
+    closeDriveModal();
     setDriveBtn(false);
   }
 };
 
 async function tryDriveAutoLoad(){
   try{
-    setFolderStatus("⏳ Google Drive 자동 연결 중…");
-    const driveFiles = await gasListFiles();
-    if(!driveFiles.length) return false;
-    setFolderStatus(`📋 Drive ${driveFiles.length}개 파일 다운로드 중…`);
-    const CHUNK=5; const fileObjs=[];
-    for(let i=0;i<driveFiles.length;i+=CHUNK){
-      const chunk=driveFiles.slice(i,i+CHUNK);
-      const results=await Promise.allSettled(chunk.map(f=>gasDownloadFile(f.id,f.name)));
-      for(const r of results) if(r.status==="fulfilled"&&r.value) fileObjs.push(r.value);
-    }
-    if(!fileObjs.length) return false;
-    applyFiles(fileObjs,"Google Drive ☁️",true);
+    setFolderStatus("⏳ Google Drive 연결 중…");
+    const list = await gasListFiles();
+    if(!list.length) return false;
+
+    driveFileMap   = list;
+    allFolderFiles = [];
+
+    availableLabels = RECORDS.filter(label=>{
+      const ln=norm(label);
+      return list.some(f=>{ const fn=norm(f.name.replace(/\.pdf$/i,"")); return fn.includes(ln)||ln.includes(fn); });
+    });
+    if(!availableLabels.length) availableLabels=[...RECORDS];
+    refreshUniList([...availableLabels]);
+
+    const matched=availableLabels.length;
+    document.getElementById("folder-status").textContent=
+      `☁️ Google Drive · PDF ${list.length}개 · 매칭 ${matched}개`;
     setDriveConnected(true);
-    toast(`☁️ Drive 자동 연결 완료 — ${fileObjs.length}개 PDF`,"ok",3000);
+    toast(`☁️ Drive 자동 연결 — ${matched}개 대학 선택 가능`,"ok",2500);
     return true;
   } catch(e){
-    console.warn("[GAS 자동복원 실패]",e.message);
+    console.warn("[GAS 자동연결 실패]",e.message);
     setFolderStatus(""); return false;
   }
 }
